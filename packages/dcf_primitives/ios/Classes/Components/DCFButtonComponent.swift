@@ -69,17 +69,12 @@ class DCFButtonComponent: NSObject, DCFComponent, ComponentMethodHandler {
     
     // Handle button press
     @objc func handleButtonPress(_ sender: UIButton) {
-        print("👆 BUTTON PRESS DETECTED")
         
         // Try to find handler using multiple backup methods
         if tryDirectHandling(sender) || tryStaticDictionaryHandling(sender) || tryAssociatedObjectHandling(sender) {
-            print("✅ Button press successfully handled")
         } else {
-            print("⚠️ Button press ignored: no handler registered")
-            
             // Last resort attempt - use generic triggerEvent if all else fails
             triggerEvent(on: sender, eventType: "onPress", eventData: [:])
-            print("🔄 Attempted generic event trigger as fallback")
         }
     }
     
@@ -108,7 +103,6 @@ class DCFButtonComponent: NSObject, DCFComponent, ComponentMethodHandler {
     // Try handling via static dictionary
     private func tryStaticDictionaryHandling(_ sender: UIButton) -> Bool {
         if let (viewId, callback) = DCFButtonComponent.buttonEventHandlers[sender] {
-            print("🔘 Button pressed via static dictionary: \(viewId)")
             
             callback(viewId, "onPress", [
                 "pressed": true,
@@ -164,8 +158,7 @@ class DCFButtonComponent: NSObject, DCFComponent, ComponentMethodHandler {
     
     func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
                           eventCallback: @escaping (String, String, [String: Any]) -> Void) {
-        guard let button = view as? UIButton else { 
-            print("❌ Cannot add event listeners to non-button view")
+        guard let button = view as? UIButton else {
             return 
         }
  
@@ -188,7 +181,6 @@ class DCFButtonComponent: NSObject, DCFComponent, ComponentMethodHandler {
         // Store strong reference to component instance to prevent deallocation
         DCFButtonComponent.registeredButtons[button] = DCFButtonComponent.sharedInstance
         
-        print("✅ Successfully added event handlers to button \(viewId)")
     }
     
     // Store event data using multiple methods for redundancy
@@ -244,7 +236,6 @@ class DCFButtonComponent: NSObject, DCFComponent, ComponentMethodHandler {
         // Remove all touch events
         button.removeTarget(nil, action: nil, for: .allEvents)
         
-        print("✅ Removed event listeners from button: \(viewId)")
     }
     
     // Helper to clean up all event references

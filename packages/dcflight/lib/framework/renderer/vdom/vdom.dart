@@ -495,6 +495,7 @@ class VDom {
 
   /// Schedule a component update for batching
   void _scheduleComponentUpdate(StatefulComponent component) {
+    print('Scheduling update for component: ${component.instanceId} from the vdom');
     _pendingUpdates.add(component.instanceId);
 
     if (_isUpdateScheduled) return;
@@ -664,6 +665,7 @@ class VDom {
 
   /// Update a view's properties
   Future<bool> updateView(String viewId, Map<String, dynamic> props) async {
+    print("UPDATE Triggered, the reconciuler is the only one that call this so the reconcielr called updateView. hopefuy the native side calls it");
     return await _nativeBridge.updateView(viewId, props);
   }
 

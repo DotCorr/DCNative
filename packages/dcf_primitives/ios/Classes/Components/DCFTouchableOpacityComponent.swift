@@ -81,7 +81,7 @@ class DCFTouchableOpacityComponent: NSObject, DCFComponent, ComponentMethodHandl
         if tryDirectEventHandling(view, eventType: "onPressIn") || 
            tryStaticDictionaryHandling(view, eventType: "onPressIn") ||
            tryGenericEventHandling(view, eventType: "onPressIn") {
-            print("✅ onPressIn event handled successfully")
+          
         } else {
             print("⚠️ onPressIn event not handled - no handler registered")
         }
@@ -118,7 +118,6 @@ class DCFTouchableOpacityComponent: NSObject, DCFComponent, ComponentMethodHandl
         if tryDirectEventHandling(view, eventType: eventType) || 
            tryStaticDictionaryHandling(view, eventType: eventType) ||
            tryGenericEventHandling(view, eventType: eventType) {
-            print("✅ \(eventType) event handled successfully")
         } else {
             print("⚠️ \(eventType) event not handled - no handler registered")
         }
