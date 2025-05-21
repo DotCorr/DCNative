@@ -504,6 +504,7 @@ class VDom {
   ///
   /// @param component The component that needs updating
   void _scheduleComponentUpdate(StatefulComponent component) {
+    print('Scheduling update for component: ${component.instanceId}');
     // Add to the pending updates queue
     _pendingUpdates.add(component.instanceId);
 
