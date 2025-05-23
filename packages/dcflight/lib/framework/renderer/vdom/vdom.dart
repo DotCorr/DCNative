@@ -303,14 +303,6 @@ class VDom {
       // Set parent relationship for the new rendered node
       newRenderedNode.parent = component;
       
-      // Check if this is a special case for the GobalStateCounterComp which is disappearing
-      final isGlobalCounterComp = component.runtimeType.toString() == 'GobalStateCounterComp';
-      if (isGlobalCounterComp) {
-        if (kDebugMode) {
-          print('⭐️ Special handling for GlobalStateCounterComp');
-        }
-      }
-
       // Reconcile trees to apply minimal changes
       if (oldRenderedNode != null) {
         // Find parent native view ID and index for replacement
@@ -322,7 +314,7 @@ class VDom {
               '${oldRenderedNode.effectiveNativeViewId} to new node (${newRenderedNode.runtimeType})');
         }
         
-        if (isGlobalCounterComp || oldRenderedNode.effectiveNativeViewId == null || parentViewId == null) {
+        if (oldRenderedNode.effectiveNativeViewId == null || parentViewId == null) {
           // For problematic components or when we don't have required IDs, use standard reconciliation
           await _reconcile(oldRenderedNode, newRenderedNode);
           
@@ -577,20 +569,9 @@ class VDom {
     } 
     // Handle component nodes
     else if (oldNode is StatefulComponent && newNode is StatefulComponent) {
-      // Special handling for disappearing GlobalStateCounterComp
-      final isGlobalCounterComp = newNode.runtimeType.toString() == 'GobalStateCounterComp';
-      if (isGlobalCounterComp) {
-        if (kDebugMode) {
-          print('🔍 Enhanced reconciliation for GobalStateCounterComp'); 
-        }
-        // Force preservation of IDs and full tree reconstruction for GlobalStateCounterComp
-        newNode.nativeViewId = oldNode.nativeViewId;
-        newNode.contentViewId = oldNode.contentViewId;
-      } else {
-        // Normal component reconciliation - transfer important properties
-        newNode.nativeViewId = oldNode.nativeViewId;
-        newNode.contentViewId = oldNode.contentViewId;
-      }
+      // Transfer important properties between nodes
+      newNode.nativeViewId = oldNode.nativeViewId;
+      newNode.contentViewId = oldNode.contentViewId;
       
       // Update component tracking
       _statefulComponents[newNode.instanceId] = newNode;
@@ -604,27 +585,8 @@ class VDom {
       final newRenderedNode = newNode.renderedNode;
       
       if (oldRenderedNode != null && newRenderedNode != null) {
-        if (isGlobalCounterComp) {
-          if (kDebugMode) {
-            print('🔄 Forcing more careful reconciliation for GobalStateCounterComp');
-            print('  Old node: ${oldRenderedNode.runtimeType}');
-            print('  New node: ${newRenderedNode.runtimeType}');
-          }
-          
-          // Transfer necessary view IDs for more stable reconciliation
-          newRenderedNode.nativeViewId = oldRenderedNode.nativeViewId;
-          
-          // Find parent view ID for proper placement in view hierarchy
-          final parentViewId = _findParentViewId(newNode);
-          
-          // Perform specialized reconciliation for Global State Counter
-          await _specialReconcileGlobalStateComponent(
-            oldRenderedNode, newRenderedNode, parentViewId
-          );
-        } else {
-          // Standard reconciliation for other components
-          await _reconcile(oldRenderedNode, newRenderedNode);
-        }
+        // Standard reconciliation for components
+        await _reconcile(oldRenderedNode, newRenderedNode);
       } else if (newRenderedNode != null) {
         // Old rendered node is null but new one exists - create from scratch
         final parentViewId = _findParentViewId(newNode);
@@ -657,92 +619,7 @@ class VDom {
     }
   }
   
-  /// Special reconciliation method for GlobalStateCounterComp with extra checks
-  Future<void> _specialReconcileGlobalStateComponent(
-    VDomNode oldNode, VDomNode newNode, String? parentViewId
-  ) async {
-    if (kDebugMode) {
-      print('Running special GlobalStateCounter reconciliation');
-    }
-    
-    try {
-      // For VDomElements, handle more carefully
-      if (oldNode is VDomElement && newNode is VDomElement) {
-        // Transfer native view ID
-        newNode.nativeViewId = oldNode.nativeViewId;
-        
-        // Update node tracking
-        if (oldNode.nativeViewId != null) {
-          _nodesByViewId[oldNode.nativeViewId!] = newNode;
-        }
-        
-        // Manually update props
-        if (oldNode.nativeViewId != null) {
-          final changedProps = Map<String, dynamic>.from(newNode.props);
-          await _nativeBridge.updateView(oldNode.nativeViewId!, changedProps);
-          
-          // Force refresh text children
-          for (int i = 0; i < oldNode.children.length; i++) {
-            final oldChild = oldNode.children[i];
-            final newChild = i < newNode.children.length ? newNode.children[i] : null;
-            
-            if (oldChild is VDomElement && 
-                oldChild.type == 'Text' && 
-                newChild is VDomElement &&
-                newChild.type == 'Text') {
-              // Force text update
-              if (oldChild.nativeViewId != null) {
-                if (kDebugMode) {
-                  print('🔤 Force updating text in GlobalCounter: ${newChild.props['content']}');
-                }
-                _nodesByViewId[oldChild.nativeViewId!] = newChild;
-                newChild.nativeViewId = oldChild.nativeViewId;
-                await _nativeBridge.updateView(oldChild.nativeViewId!, {
-                  'content': newChild.props['content']
-                });
-              }
-            }
-          }
-          
-          // Process children (just keep using existing tree)
-          for (int i = 0; i < oldNode.children.length && i < newNode.children.length; i++) {
-            await _specialReconcileGlobalStateComponent(
-              oldNode.children[i],
-              newNode.children[i],
-              oldNode.nativeViewId
-            );
-          }
-        }
-      } 
-      // Handle components
-      else if ((oldNode is StatefulComponent || oldNode is StatelessComponent) &&
-               (newNode is StatefulComponent || newNode is StatelessComponent)) {
-        // Transfer IDs
-        newNode.nativeViewId = oldNode.nativeViewId;
-        newNode.contentViewId = oldNode.contentViewId;
-        
-        // Handle rendered nodes
-        final oldRendered = oldNode is StatefulComponent 
-            ? oldNode.renderedNode 
-            : (oldNode as StatelessComponent).renderedNode;
-            
-        final newRendered = newNode is StatefulComponent 
-            ? newNode.renderedNode 
-            : (newNode as StatelessComponent).renderedNode;
-            
-        if (oldRendered != null && newRendered != null) {
-          await _specialReconcileGlobalStateComponent(
-            oldRendered, newRendered, parentViewId
-          );
-        }
-      }
-    } catch (e, stack) {
-      if (kDebugMode) {
-        developer.log('Error in special GlobalCounter reconciliation: $e',
-            name: 'VDom', error: e, stackTrace: stack);
-      }
-    }
-  }
+  // No special handling for specific component types - all components are treated equally
   
   /// Replace a node entirely
   Future<void> _replaceNode(VDomNode oldNode, VDomNode newNode) async {

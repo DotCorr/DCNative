@@ -15,7 +15,10 @@ class DCFGo extends StatefulComponent {
         TopBar(globalCounter: globalCounter, counter: counter),
         DCFScrollView(
           showsScrollIndicator: true,
-          style: StyleSheet(backgroundColor: Colors.white),
+          style: StyleSheet(
+            backgroundColor:
+                counter.value % 2 == 0 ? Colors.amber : Colors.white,
+          ),
           layout: LayoutProps(
             paddingHorizontal: 20,
             justifyContent: YogaJustifyContent.spaceBetween,
