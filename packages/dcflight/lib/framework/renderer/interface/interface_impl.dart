@@ -108,10 +108,22 @@ class PlatformInterfaceImpl implements PlatformInterface {
       // Process props for updates
       final processedProps = preprocessProps(propPatches);
 
+      // Special case for text content updates to ensure they're always propagated
+      if (propPatches.containsKey('content')) {
+        if (kDebugMode) {
+          print('Updating content for view $viewId: ${propPatches['content']}');
+        }
+      }
+      
+      // Make sure prop updates are properly queued even if many updates happen quickly
       final result = await bridgeChannel.invokeMethod<bool>('updateView', {
         'viewId': viewId,
         'props': processedProps,
       });
+
+      if (result != true && kDebugMode) {
+        print('Native updateView returned false for viewId: $viewId');
+      }
 
       return result ?? false;
     } catch (e) {

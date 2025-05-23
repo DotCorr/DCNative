@@ -1,5 +1,6 @@
 /// This file serves as a central export point for the VDOM system,
 /// allowing easy swapping between implementations.
+library;
 
 // Re-export the new VDOM API
 export 'vdom_api.dart';

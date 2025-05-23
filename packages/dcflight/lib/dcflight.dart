@@ -25,7 +25,7 @@ export 'framework/protocol/plugin_protocol.dart';
 
 import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
 
-import 'framework/renderer/vdom/vdom.dart';
+import 'framework/renderer/vdom/vdom_api.dart'; 
 import 'framework/renderer/interface/interface.dart';
 import 'framework/utilities/screen_utilities.dart';
 import 'framework/protocol/plugin_protocol.dart';
@@ -45,6 +45,9 @@ class DCFlight {
     // Initialize screen utilities
     ScreenUtilities.instance.refreshDimensions();
     
+    // Initialize VDOM API with the bridge
+    await VDomAPI.instance.init(bridge);
+    
     // Register core plugin
     PluginRegistry.instance.registerPlugin(CorePlugin.instance);
     
@@ -54,22 +57,20 @@ class DCFlight {
   /// Start the application with the given root component
   static Future<void> start({required VDomNode app}) async {
     await _initialize();
-    // Create VDOM instance
-    final vdom = VDom();
+    
+    // Get the VDOM API instance
+    final vdom = VDomAPI.instance;
     
     // Create our main app component
     final mainApp = app;
     
-    // Register the component with the VDOM
-    vdom.rootComponent = mainApp;
-    
-    // Render the component to native UI
-    await vdom.renderToNative(mainApp, parentId: "root", index: 0);
+    // Create root with this component
+    await vdom.createRoot(mainApp);
     
     // Wait for the VDom to be ready
     vdom.isReady.whenComplete(() async {
       debugPrint('VDOM is ready to calculate');
-      await vdom.calculateAndApplyLayout().then((v) {
+      await vdom.calculateLayout().then((_) {
         debugPrint('VDOM layout applied from entry point');
       });
     });

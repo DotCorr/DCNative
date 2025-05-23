@@ -180,21 +180,40 @@ class VDom {
         return;
       }
 
+      if (kDebugMode) {
+        print('Processing ${_pendingUpdates.length} pending updates');
+      }
+
       // Copy the pending updates to allow for new ones during processing
       final updates = Set<String>.from(_pendingUpdates);
       _pendingUpdates.clear();
       
-      // Process each component update
-      for (final componentId in updates) {
-        await _updateComponentById(componentId);
+      // Start batch update in native layer
+      await _nativeBridge.startBatchUpdate();
+      
+      try {
+        // Process each component update
+        for (final componentId in updates) {
+          await _updateComponentById(componentId);
+        }
+        
+        // Commit all batched updates at once
+        await _nativeBridge.commitBatchUpdate();
+        
+        // Calculate layout at the end for all updates at once
+        await calculateAndApplyLayout();
+      } catch (e) {
+        // Cancel batch if there's an error
+        await _nativeBridge.cancelBatchUpdate();
+        rethrow;
       }
-
-      // Calculate layout at the end for all updates at once
-      await calculateAndApplyLayout();
 
       // Check if new updates were scheduled during processing
       if (_pendingUpdates.isNotEmpty) {
         // Process new updates in next microtask
+        if (kDebugMode) {
+          print('Scheduling another update batch for ${_pendingUpdates.length} components');
+        }
         Future.microtask(_processPendingUpdates);
       } else {
         _isUpdateScheduled = false;
@@ -215,6 +234,10 @@ class VDom {
     if (component == null) return;
 
     try {
+      if (kDebugMode) {
+        print('Updating component: $componentId');
+      }
+      
       // Perform component-specific update preparation
       if (component is StatefulComponent) {
         component.prepareForRender();
@@ -239,11 +262,39 @@ class VDom {
 
       // Reconcile trees to apply minimal changes
       if (oldRenderedNode != null) {
-        await _reconcile(oldRenderedNode, newRenderedNode);
+        if (kDebugMode) {
+          print('Reconciling from old node: ${oldRenderedNode.effectiveNativeViewId} to new node');
+        }
         
-        // Update contentViewId reference from old to new
-        if (oldRenderedNode.effectiveNativeViewId != null) {
-          component.contentViewId = oldRenderedNode.effectiveNativeViewId;
+        // Find parent native view ID and index for replacement
+        final parentViewId = _findParentViewId(component);
+        final index = _findNodeIndexInParent(component);
+        
+        if (oldRenderedNode.effectiveNativeViewId != null && parentViewId != null) {
+          // Instead of trying to reconcile, completely replace the old view with a new one
+          // This ensures a clean update without reconciliation issues
+          if (kDebugMode) {
+            print('Replacing view ${oldRenderedNode.effectiveNativeViewId} with new render');
+          }
+          
+          await _nativeBridge.deleteView(oldRenderedNode.effectiveNativeViewId!);
+          _nodesByViewId.remove(oldRenderedNode.effectiveNativeViewId);
+          
+          // Render the new content to native
+          final newViewId = await renderToNative(newRenderedNode, parentViewId: parentViewId, index: index);
+          
+          // Update contentViewId reference to new view
+          if (newViewId != null) {
+            component.contentViewId = newViewId;
+          }
+        } else {
+          // Fallback to traditional reconciliation if we can't do a full replacement
+          await _reconcile(oldRenderedNode, newRenderedNode);
+          
+          // Update contentViewId reference from old to new
+          if (oldRenderedNode.effectiveNativeViewId != null) {
+            component.contentViewId = oldRenderedNode.effectiveNativeViewId;
+          }
         }
       } else if (component.contentViewId != null) {
         // If no previous node but we have a content view ID, this might be a special case
@@ -530,11 +581,32 @@ class VDom {
       // Copy native view ID to new element for tracking
       newElement.nativeViewId = oldElement.nativeViewId;
       
-      // Find changed props
+      // Special handling for text elements
+      if (oldElement.type == 'Text' && newElement.type == 'Text') {
+        // Force content update for text elements to ensure it propagates
+        final changedProps = Map<String, dynamic>.from(newElement.props);
+        
+        if (kDebugMode) {
+          print('Forcing text update: old=${oldElement.props['content']}, new=${newElement.props['content']}');
+        }
+        
+        // First ensure old element is in tracking map with updated ID
+        _nodesByViewId[oldElement.nativeViewId!] = newElement;
+        
+        // Update the native view with forced content update
+        await _nativeBridge.updateView(oldElement.nativeViewId!, changedProps);
+        return; // Skip normal reconciliation for text elements
+      }
+      
+      // Find changed props for normal elements
       final changedProps = _diffProps(oldElement.props, newElement.props);
       
       // Update props if there are changes
       if (changedProps.isNotEmpty) {
+        if (kDebugMode) {
+          print('Updating props for ${oldElement.type} (${oldElement.nativeViewId}): $changedProps');
+        }
+        
         // First ensure old element is in tracking map with updated ID
         _nodesByViewId[oldElement.nativeViewId!] = newElement;
         
