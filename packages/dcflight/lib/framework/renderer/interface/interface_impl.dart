@@ -95,6 +95,7 @@ class PlatformInterfaceImpl implements PlatformInterface {
   Future<bool> updateView(
       String viewId, Map<String, dynamic> propPatches) async {
     // Track operation for batch updates if needed
+    print("FINAL UPDATE GET CALLED");
     if (_batchUpdateInProgress) {
       _pendingBatchUpdates.add({
         'operation': 'updateView',
