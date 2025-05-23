@@ -154,13 +154,27 @@ class VDom {
     
     // Add to the pending updates queue
     _pendingUpdates.add(component.instanceId);
+    
+    // Force update of the parent component as well if it exists
+    // This ensures changes propagate up the component tree
+    VDomNode? parent = component.parent;
+    while (parent != null) {
+      if (parent is StatefulComponent) {
+        if (kDebugMode) {
+          print('  Adding parent component to update queue: ${parent.instanceId}');
+        }
+        _pendingUpdates.add(parent.instanceId);
+      }
+      parent = parent.parent;
+    }
 
     // Only schedule a new update if one isn't already scheduled
     if (!_isUpdateScheduled) {
       _isUpdateScheduled = true;
 
       // Schedule updates asynchronously to batch multiple updates
-      Future.microtask(_processPendingUpdates);
+      // Use a short delay to allow multiple state changes to be batched together
+      Future.delayed(const Duration(milliseconds: 10), _processPendingUpdates);
     }
   }
 
