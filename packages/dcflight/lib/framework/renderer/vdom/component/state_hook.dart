@@ -1,10 +1,10 @@
-// filepath: /Users/tahiruagbanwa/Desktop/Dotcorr/DCFlight/packages/dcflight/lib/framework/renderer/vdom/component/state_hook.dart
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 import 'store.dart';
 
-/// Base hook class
+/// Base hook class for all hook types
 abstract class Hook {
-  /// Clean up the hook
+  /// Clean up the hook when component unmounts
   void dispose() {}
 }
 
@@ -16,7 +16,7 @@ class StateHook<T> extends Hook {
   /// Name for debugging
   final String? _name;
 
-  /// The component that owns this state
+  /// Schedule update function to trigger re-render
   final Function() _scheduleUpdate;
 
   /// Create a state hook
@@ -25,23 +25,31 @@ class StateHook<T> extends Hook {
   /// Get the current value
   T get value => _value;
 
-  /// Set the value and mark as dirty
+  /// Set the value and trigger update
   void setValue(T newValue) {
-    // Skip update if value is identical (for references) or equal (for values)
-    if (identical(_value, newValue) || _value == newValue) {
-      return;
+    // Only update and trigger render if value actually changed
+    if (_value != newValue) {
+      _value = newValue;
+      
+      if (kDebugMode) {
+        final name = _name != null ? ' ($_name)' : '';
+        developer.log('State changed$name: $newValue', name: 'StateHook');
+      }
+      
+      // Schedule a component update
+      _scheduleUpdate();
     }
-
-    if (_name != null) {
-      developer.log('State updated: $_name from $_value to $newValue',
-          name: 'StateHook');
-    }
-
-    // Store the new value
-    _value = newValue;
-
-    // Schedule component update
-    _scheduleUpdate();
+  }
+  
+  @override
+  void dispose() {
+    // Nothing to dispose for simple state
+  }
+  
+  @override
+  String toString() {
+    final name = _name != null ? ' ($_name)' : '';
+    return 'StateHook$name: $_value';
   }
 }
 
@@ -50,51 +58,51 @@ class EffectHook extends Hook {
   /// The effect function
   final Function()? Function() _effect;
 
-  /// Dependencies array
-  final List<dynamic> _dependencies;
+  /// Dependencies array - when these change, effect runs again
+  List<dynamic> _dependencies;
 
   /// Cleanup function returned by the effect
   Function()? _cleanup;
 
-  /// Previous dependencies
+  /// Previous dependencies for comparison
   List<dynamic>? _prevDeps;
 
   /// Create an effect hook
   EffectHook(this._effect, this._dependencies);
+  
+  /// Update dependencies - called during reconciliation
+  void updateDependencies(List<dynamic> newDependencies) {
+    _dependencies = newDependencies;
+  }
 
-  /// Run the effect if needed
+  /// Run the effect if needed based on dependency changes
   void runEffect() {
-    // Only run if:
-    // 1. No previous dependencies (first run)
-    // 2. Dependencies array is empty (run on every render)
-    // 3. Dependencies changed since last run
-    if (_prevDeps == null ||
-        _dependencies.isEmpty ||
-        !_areEqualDeps(_dependencies, _prevDeps!)) {
-      // Run cleanup if exists
+    // Run effect if first time or dependencies changed
+    if (_prevDeps == null || !_areEqualDeps(_dependencies, _prevDeps!)) {
+      // Clean up previous effect if needed
       if (_cleanup != null) {
         _cleanup!();
         _cleanup = null;
       }
 
-      // Run effect and store cleanup
+      // Run the effect and store cleanup
       _cleanup = _effect();
-
-      // Store current dependencies for comparison
-      _prevDeps = List.from(_dependencies);
+      
+      // Update previous dependencies
+      _prevDeps = List<dynamic>.from(_dependencies);
     }
   }
 
   @override
   void dispose() {
-    // Run cleanup if exists
+    // Run cleanup if it exists
     if (_cleanup != null) {
       _cleanup!();
       _cleanup = null;
     }
   }
 
-  // Compare two dependency arrays
+  /// Compare two dependency arrays for equality
   bool _areEqualDeps(List<dynamic> a, List<dynamic> b) {
     if (a.length != b.length) return false;
     
@@ -112,27 +120,29 @@ class RefObject<T> {
   T? _value;
 
   /// Create a ref object
-  RefObject(this._value);
+  RefObject([this._value]);
 
   /// Get current value
   T? get current => _value;
-
+  
   /// Set current value
   set current(T? value) {
     _value = value;
   }
 }
 
-/// Ref hook for storing mutable references that don't trigger rerenders
+/// Ref hook for storing mutable references
 class RefHook<T> extends Hook {
   /// The ref object
-  final RefObject<T> _ref;
+  final RefObject<T> ref;
 
   /// Create a ref hook
-  RefHook(T? initialValue) : _ref = RefObject<T>(initialValue);
-
-  /// Get the ref object
-  RefObject<T> get ref => _ref;
+  RefHook([T? initialValue]) : ref = RefObject<T>(initialValue);
+  
+  @override
+  void dispose() {
+    // Nothing to dispose for refs
+  }
 }
 
 /// Store hook for connecting to global state
@@ -140,39 +150,39 @@ class StoreHook<T> extends Hook {
   /// The store
   final Store<T> _store;
   
-  /// The component that owns this hook
-  final Function() _scheduleUpdate;
+  /// State change callback
+  final Function() _onChange;
   
-  /// Listener for store updates
+  /// Listener function reference for unsubscribing
   late final void Function(T) _listener;
-  
+
   /// Create a store hook
-  StoreHook(this._store, this._scheduleUpdate) {
-    // Create listener that schedules component update when store changes
-    _listener = (_) {
-      _scheduleUpdate();
+  StoreHook(this._store, this._onChange) {
+    // Create listener function that triggers component update
+    _listener = (T _) {
+      _onChange();
     };
     
-    // Subscribe to store updates
+    // Subscribe to store changes
     _store.subscribe(_listener);
   }
-  
-  /// Get the current state from the store
+
+  /// Get current state
   T get state => _store.state;
   
-  /// Update the store state
+  /// Update store state
   void setState(T newState) {
     _store.setState(newState);
   }
   
-  /// Update the store state using a function
+  /// Update store state with a function
   void updateState(T Function(T) updater) {
     _store.updateState(updater);
   }
-  
+
   @override
   void dispose() {
-    // Unsubscribe from store updates
+    // Unsubscribe from store on disposal
     _store.unsubscribe(_listener);
   }
 }

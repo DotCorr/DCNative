@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:dcflight/framework/renderer/interface/interface.dart' show PlatformInterface;
 import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
 import 'package:dcflight/framework/renderer/vdom/vdom_element.dart';
-import 'vdom_new.dart';
+import 'vdom.dart';
 
 /// Main API for VDOM operations
 /// This class provides a simplified interface to the VDOM implementation
