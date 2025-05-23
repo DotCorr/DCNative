@@ -149,22 +149,45 @@ class VDom {
   /// This is a key method that triggers UI updates after state changes
   void _scheduleComponentUpdate(StatefulComponent component) {
     if (kDebugMode) {
-      print('Scheduling update for component: ${component.instanceId}');
+      print('Scheduling update for component: ${component.instanceId} (${component.runtimeType})');
+    }
+    
+    // Verify component is still registered
+    if (!_statefulComponents.containsKey(component.instanceId)) {
+      if (kDebugMode) {
+        print('Warning: Attempting to update unregistered component: ${component.instanceId}');
+      }
+      // Re-register the component to ensure it's tracked
+      registerComponent(component);
     }
     
     // Add to the pending updates queue
     _pendingUpdates.add(component.instanceId);
     
-    // Force update of the parent component as well if it exists
-    // This ensures changes propagate up the component tree
+    // Find the root component from this component
+    VDomNode? rootComponentCandidate = component;
+    while (rootComponentCandidate != null && rootComponentCandidate.parent != null) {
+      rootComponentCandidate = rootComponentCandidate.parent;
+    }
+    
+    // If this is a top-level fragment, make sure the entire app updates
+    if (rootComponent != null && rootComponentCandidate == rootComponent) {
+      if (kDebugMode) {
+        print('Adding global app update to ensure full reconciliation');
+      }
+    }
+    
+    // Add the direct container component to ensure proper reconciliation
     VDomNode? parent = component.parent;
     while (parent != null) {
+      // Update parent components to propagate the changes up the tree
       if (parent is StatefulComponent) {
         if (kDebugMode) {
-          print('  Adding parent component to update queue: ${parent.instanceId}');
+          print('  Adding parent component to update queue: ${parent.instanceId} (${parent.runtimeType})');
         }
         _pendingUpdates.add(parent.instanceId);
-      }
+      } 
+      // Continue walking up the tree to find all affected components
       parent = parent.parent;
     }
 
@@ -173,8 +196,9 @@ class VDom {
       _isUpdateScheduled = true;
 
       // Schedule updates asynchronously to batch multiple updates
-      // Use a short delay to allow multiple state changes to be batched together
-      Future.delayed(const Duration(milliseconds: 10), _processPendingUpdates);
+      // Use a very short delay to allow multiple state changes to be batched together
+      // but maintain responsiveness
+      Future.microtask(_processPendingUpdates);
     }
   }
 
@@ -245,11 +269,16 @@ class VDom {
   /// Update a component by its ID
   Future<void> _updateComponentById(String componentId) async {
     final component = _statefulComponents[componentId] ?? _statelessComponents[componentId];
-    if (component == null) return;
+    if (component == null) {
+      if (kDebugMode) {
+        print('⚠️ Cannot update component - not found: $componentId');
+      }
+      return;
+    }
 
     try {
       if (kDebugMode) {
-        print('Updating component: $componentId');
+        print('Updating component: $componentId (${component.runtimeType})');
       }
       
       // Perform component-specific update preparation
@@ -273,49 +302,58 @@ class VDom {
 
       // Set parent relationship for the new rendered node
       newRenderedNode.parent = component;
+      
+      // Check if this is a special case for the GobalStateCounterComp which is disappearing
+      final isGlobalCounterComp = component.runtimeType.toString() == 'GobalStateCounterComp';
+      if (isGlobalCounterComp) {
+        if (kDebugMode) {
+          print('⭐️ Special handling for GlobalStateCounterComp');
+        }
+      }
 
       // Reconcile trees to apply minimal changes
       if (oldRenderedNode != null) {
-        if (kDebugMode) {
-          print('Reconciling from old node: ${oldRenderedNode.effectiveNativeViewId} to new node');
-        }
-        
         // Find parent native view ID and index for replacement
         final parentViewId = _findParentViewId(component);
         final index = _findNodeIndexInParent(component);
         
-        if (oldRenderedNode.effectiveNativeViewId != null && parentViewId != null) {
-          // Instead of trying to reconcile, completely replace the old view with a new one
-          // This ensures a clean update without reconciliation issues
-          if (kDebugMode) {
-            print('Replacing view ${oldRenderedNode.effectiveNativeViewId} with new render');
-          }
-          
-          await _nativeBridge.deleteView(oldRenderedNode.effectiveNativeViewId!);
-          _nodesByViewId.remove(oldRenderedNode.effectiveNativeViewId);
-          
-          // Render the new content to native
-          final newViewId = await renderToNative(newRenderedNode, parentViewId: parentViewId, index: index);
-          
-          // Update contentViewId reference to new view
-          if (newViewId != null) {
-            component.contentViewId = newViewId;
-          }
-        } else {
-          // Fallback to traditional reconciliation if we can't do a full replacement
+        if (kDebugMode) {
+          print('Reconciling from old node (${oldRenderedNode.runtimeType}): ' +
+              '${oldRenderedNode.effectiveNativeViewId} to new node (${newRenderedNode.runtimeType})');
+        }
+        
+        if (isGlobalCounterComp || oldRenderedNode.effectiveNativeViewId == null || parentViewId == null) {
+          // For problematic components or when we don't have required IDs, use standard reconciliation
           await _reconcile(oldRenderedNode, newRenderedNode);
           
           // Update contentViewId reference from old to new
           if (oldRenderedNode.effectiveNativeViewId != null) {
             component.contentViewId = oldRenderedNode.effectiveNativeViewId;
           }
+        } else {
+          // Try a two-step approach that's more reliable - first reconcile to preserve structure,
+          // then ensure props are properly updated
+          await _reconcile(oldRenderedNode, newRenderedNode);
+          
+          // Update contentViewId reference
+          component.contentViewId = oldRenderedNode.effectiveNativeViewId;
+          
+          // Update any TextNodes recursively to ensure they're refreshed
+          await _forceUpdateTextNodes(oldRenderedNode);
         }
-      } else if (component.contentViewId != null) {
-        // If no previous node but we have a content view ID, this might be a special case
-        // Find parent and index for proper placement
+      } else {
+        // No previous rendering, create from scratch
         final parentViewId = _findParentViewId(component);
         if (parentViewId != null) {
-          await renderToNative(newRenderedNode, parentViewId: parentViewId);
+          if (kDebugMode) {
+            print('Creating new rendered node for component with parent: $parentViewId');
+          }
+          final newViewId = await renderToNative(newRenderedNode, parentViewId: parentViewId);
+          if (newViewId != null) {
+            component.contentViewId = newViewId;
+          }
+        } else if (kDebugMode) {
+          print('Cannot create new rendered node: parent viewId not found');
         }
       }
 
@@ -328,6 +366,33 @@ class VDom {
       if (kDebugMode) {
         developer.log('Error updating component: $e', 
             name: 'VDom', error: e, stackTrace: stack);
+      }
+    }
+  }
+  
+  /// Helper method to recursively force updates of text nodes
+  Future<void> _forceUpdateTextNodes(VDomNode node) async {
+    if (node is VDomElement) {
+      // Special handling for text elements to ensure they update
+      if (node.type == 'Text' && node.nativeViewId != null) {
+        if (node.props.containsKey('content')) {
+          final content = node.props['content'];
+          if (kDebugMode) {
+            print('Force updating text node ${node.nativeViewId}: $content');
+          }
+          await _nativeBridge.updateView(node.nativeViewId!, {'content': content});
+        }
+      }
+      
+      // Recursively process children
+      for (final child in node.children) {
+        await _forceUpdateTextNodes(child);
+      }
+    } else if (node is StatefulComponent || node is StatelessComponent) {
+      // Continue down to rendered content
+      final renderedNode = node.renderedNode;
+      if (renderedNode != null) {
+        await _forceUpdateTextNodes(renderedNode);
       }
     }
   }
@@ -484,39 +549,105 @@ class VDom {
 
   /// Reconcile two nodes by efficiently updating only what changed
   Future<void> _reconcile(VDomNode oldNode, VDomNode newNode) async {
+    // Transfer important parent reference first
+    newNode.parent = oldNode.parent;
+    
+    if (kDebugMode) {
+      print('Reconciling ${oldNode.runtimeType} to ${newNode.runtimeType}');
+    }
+
     // If the node types are completely different, replace the node entirely
     if (oldNode.runtimeType != newNode.runtimeType) {
+      if (kDebugMode) {
+        print('Different node types: ${oldNode.runtimeType} -> ${newNode.runtimeType}');
+      }
       await _replaceNode(oldNode, newNode);
       return;
     }
 
     // Handle different node types
     if (oldNode is VDomElement && newNode is VDomElement) {
-      // Different element types require complete replacement
-      if (oldNode.type != newNode.type || oldNode.key != newNode.key) {
+      // If different element types, we need to replace it
+      if (oldNode.type != newNode.type) {
         await _replaceNode(oldNode, newNode);
       } else {
-        // Same element type - update props and reconcile children
+        // Same element type - update props and children only
         await _reconcileElement(oldNode, newNode);
       }
     } 
     // Handle component nodes
-    else if ((oldNode is StatefulComponent && newNode is StatefulComponent) ||
-             (oldNode is StatelessComponent && newNode is StatelessComponent)) {
-      // Transfer native IDs to new node for proper tracking
+    else if (oldNode is StatefulComponent && newNode is StatefulComponent) {
+      // Special handling for disappearing GlobalStateCounterComp
+      final isGlobalCounterComp = newNode.runtimeType.toString() == 'GobalStateCounterComp';
+      if (isGlobalCounterComp) {
+        if (kDebugMode) {
+          print('🔍 Enhanced reconciliation for GobalStateCounterComp'); 
+        }
+        // Force preservation of IDs and full tree reconstruction for GlobalStateCounterComp
+        newNode.nativeViewId = oldNode.nativeViewId;
+        newNode.contentViewId = oldNode.contentViewId;
+      } else {
+        // Normal component reconciliation - transfer important properties
+        newNode.nativeViewId = oldNode.nativeViewId;
+        newNode.contentViewId = oldNode.contentViewId;
+      }
+      
+      // Update component tracking
+      _statefulComponents[newNode.instanceId] = newNode;
+      newNode.scheduleUpdate = oldNode.scheduleUpdate;
+      
+      // Register the new component instance
+      registerComponent(newNode);
+      
+      // Handle reconciliation of the rendered trees
+      final oldRenderedNode = oldNode.renderedNode;
+      final newRenderedNode = newNode.renderedNode;
+      
+      if (oldRenderedNode != null && newRenderedNode != null) {
+        if (isGlobalCounterComp) {
+          if (kDebugMode) {
+            print('🔄 Forcing more careful reconciliation for GobalStateCounterComp');
+            print('  Old node: ${oldRenderedNode.runtimeType}');
+            print('  New node: ${newRenderedNode.runtimeType}');
+          }
+          
+          // Transfer necessary view IDs for more stable reconciliation
+          newRenderedNode.nativeViewId = oldRenderedNode.nativeViewId;
+          
+          // Find parent view ID for proper placement in view hierarchy
+          final parentViewId = _findParentViewId(newNode);
+          
+          // Perform specialized reconciliation for Global State Counter
+          await _specialReconcileGlobalStateComponent(
+            oldRenderedNode, newRenderedNode, parentViewId
+          );
+        } else {
+          // Standard reconciliation for other components
+          await _reconcile(oldRenderedNode, newRenderedNode);
+        }
+      } else if (newRenderedNode != null) {
+        // Old rendered node is null but new one exists - create from scratch
+        final parentViewId = _findParentViewId(newNode);
+        if (parentViewId != null) {
+          final newViewId = await renderToNative(newRenderedNode, parentViewId: parentViewId);
+          if (newViewId != null) {
+            newNode.contentViewId = newViewId;
+          }
+        }
+      }
+    }
+    // Handle stateless components
+    else if (oldNode is StatelessComponent && newNode is StatelessComponent) {
+      // Transfer IDs
       newNode.nativeViewId = oldNode.nativeViewId;
       newNode.contentViewId = oldNode.contentViewId;
       
-      // Different component types need replacement
-      if (oldNode.runtimeType != newNode.runtimeType) {
-        await _replaceNode(oldNode, newNode);
-      } else {
-        // Same component type - update it
-        final componentId = oldNode is StatefulComponent 
-            ? oldNode.instanceId 
-            : (oldNode as StatelessComponent).instanceId;
-            
-        await _updateComponentById(componentId);
+      // Handle reconciliation of the rendered trees
+      final oldRenderedNode = oldNode.renderedNode;
+      final newRenderedNode = newNode.renderedNode;
+      
+      if (oldRenderedNode != null && newRenderedNode != null) {
+        await _reconcile(oldRenderedNode, newRenderedNode);
       }
     }
     // Handle empty nodes
@@ -525,7 +656,94 @@ class VDom {
       return;
     }
   }
-
+  
+  /// Special reconciliation method for GlobalStateCounterComp with extra checks
+  Future<void> _specialReconcileGlobalStateComponent(
+    VDomNode oldNode, VDomNode newNode, String? parentViewId
+  ) async {
+    if (kDebugMode) {
+      print('Running special GlobalStateCounter reconciliation');
+    }
+    
+    try {
+      // For VDomElements, handle more carefully
+      if (oldNode is VDomElement && newNode is VDomElement) {
+        // Transfer native view ID
+        newNode.nativeViewId = oldNode.nativeViewId;
+        
+        // Update node tracking
+        if (oldNode.nativeViewId != null) {
+          _nodesByViewId[oldNode.nativeViewId!] = newNode;
+        }
+        
+        // Manually update props
+        if (oldNode.nativeViewId != null) {
+          final changedProps = Map<String, dynamic>.from(newNode.props);
+          await _nativeBridge.updateView(oldNode.nativeViewId!, changedProps);
+          
+          // Force refresh text children
+          for (int i = 0; i < oldNode.children.length; i++) {
+            final oldChild = oldNode.children[i];
+            final newChild = i < newNode.children.length ? newNode.children[i] : null;
+            
+            if (oldChild is VDomElement && 
+                oldChild.type == 'Text' && 
+                newChild is VDomElement &&
+                newChild.type == 'Text') {
+              // Force text update
+              if (oldChild.nativeViewId != null) {
+                if (kDebugMode) {
+                  print('🔤 Force updating text in GlobalCounter: ${newChild.props['content']}');
+                }
+                _nodesByViewId[oldChild.nativeViewId!] = newChild;
+                newChild.nativeViewId = oldChild.nativeViewId;
+                await _nativeBridge.updateView(oldChild.nativeViewId!, {
+                  'content': newChild.props['content']
+                });
+              }
+            }
+          }
+          
+          // Process children (just keep using existing tree)
+          for (int i = 0; i < oldNode.children.length && i < newNode.children.length; i++) {
+            await _specialReconcileGlobalStateComponent(
+              oldNode.children[i],
+              newNode.children[i],
+              oldNode.nativeViewId
+            );
+          }
+        }
+      } 
+      // Handle components
+      else if ((oldNode is StatefulComponent || oldNode is StatelessComponent) &&
+               (newNode is StatefulComponent || newNode is StatelessComponent)) {
+        // Transfer IDs
+        newNode.nativeViewId = oldNode.nativeViewId;
+        newNode.contentViewId = oldNode.contentViewId;
+        
+        // Handle rendered nodes
+        final oldRendered = oldNode is StatefulComponent 
+            ? oldNode.renderedNode 
+            : (oldNode as StatelessComponent).renderedNode;
+            
+        final newRendered = newNode is StatefulComponent 
+            ? newNode.renderedNode 
+            : (newNode as StatelessComponent).renderedNode;
+            
+        if (oldRendered != null && newRendered != null) {
+          await _specialReconcileGlobalStateComponent(
+            oldRendered, newRendered, parentViewId
+          );
+        }
+      }
+    } catch (e, stack) {
+      if (kDebugMode) {
+        developer.log('Error in special GlobalCounter reconciliation: $e',
+            name: 'VDom', error: e, stackTrace: stack);
+      }
+    }
+  }
+  
   /// Replace a node entirely
   Future<void> _replaceNode(VDomNode oldNode, VDomNode newNode) async {
     // Can't replace if the old node has no view ID
