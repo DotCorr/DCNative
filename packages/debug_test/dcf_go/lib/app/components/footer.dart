@@ -7,6 +7,10 @@ class GobalStateCounterComp extends StatefulComponent {
   VDomNode render() {
     final globalCounter = useStore(globalCounterState);
     return DCFView(
+      style: StyleSheet(
+        backgroundColor:   globalCounter.state % 2 == 0 ? Colors.amber :Colors.teal
+
+      ),
       layout: LayoutProps(
         height: 100,
         marginVertical: 20,

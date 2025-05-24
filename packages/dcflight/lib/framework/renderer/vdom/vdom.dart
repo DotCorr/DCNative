@@ -690,24 +690,7 @@ class VDom {
       // Copy native view ID to new element for tracking
       newElement.nativeViewId = oldElement.nativeViewId;
       
-      // Special handling for text elements
-      if (oldElement.type == 'Text' && newElement.type == 'Text') {
-        // Force content update for text elements to ensure it propagates
-        final changedProps = Map<String, dynamic>.from(newElement.props);
-        
-        if (kDebugMode) {
-          print('Forcing text update: old=${oldElement.props['content']}, new=${newElement.props['content']}');
-        }
-        
-        // First ensure old element is in tracking map with updated ID
-        _nodesByViewId[oldElement.nativeViewId!] = newElement;
-        
-        // Update the native view with forced content update
-        await _nativeBridge.updateView(oldElement.nativeViewId!, changedProps);
-        return; // Skip normal reconciliation for text elements
-      }
-      
-      // Find changed props for normal elements
+      // Find changed props using proper diffing algorithm
       final changedProps = _diffProps(oldElement.props, newElement.props);
       
       // Update props if there are changes
