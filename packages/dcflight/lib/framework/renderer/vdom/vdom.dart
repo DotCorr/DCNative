@@ -31,6 +31,9 @@ class VDom {
   /// Map to track components by their instance ID
   final Map<String, StatelessComponent> _statelessComponents = {};
   
+  /// Map to track previous rendered nodes for components (for proper reconciliation)
+  final Map<String, VDomNode> _previousRenderedNodes = {};
+  
   /// Pending component updates for batching
   final Set<String> _pendingUpdates = {};
   
@@ -286,8 +289,13 @@ class VDom {
         component.prepareForRender();
       }
 
-      // Get old and new rendered trees
+      // Store the previous rendered node before re-rendering
       final oldRenderedNode = component.renderedNode;
+      
+      // Store a reference to the old rendered node for proper reconciliation
+      if (oldRenderedNode != null) {
+        _previousRenderedNodes[componentId] = oldRenderedNode;
+      }
       
       // Force re-render by clearing cached rendered node
       component.renderedNode = null;
@@ -304,35 +312,34 @@ class VDom {
       newRenderedNode.parent = component;
       
       // Reconcile trees to apply minimal changes
-      if (oldRenderedNode != null) {
+      final previousRenderedNode = _previousRenderedNodes[componentId];
+      if (previousRenderedNode != null) {
         // Find parent native view ID and index for replacement
         final parentViewId = _findParentViewId(component);
-        final index = _findNodeIndexInParent(component);
         
         if (kDebugMode) {
-          print('Reconciling from old node (${oldRenderedNode.runtimeType}): ' +
-              '${oldRenderedNode.effectiveNativeViewId} to new node (${newRenderedNode.runtimeType})');
+          print('Reconciling from old node (${previousRenderedNode.runtimeType}): ' +
+              '${previousRenderedNode.effectiveNativeViewId} to new node (${newRenderedNode.runtimeType})');
         }
         
-        if (oldRenderedNode.effectiveNativeViewId == null || parentViewId == null) {
+        if (previousRenderedNode.effectiveNativeViewId == null || parentViewId == null) {
           // For problematic components or when we don't have required IDs, use standard reconciliation
-          await _reconcile(oldRenderedNode, newRenderedNode);
+          await _reconcile(previousRenderedNode, newRenderedNode);
           
           // Update contentViewId reference from old to new
-          if (oldRenderedNode.effectiveNativeViewId != null) {
-            component.contentViewId = oldRenderedNode.effectiveNativeViewId;
+          if (previousRenderedNode.effectiveNativeViewId != null) {
+            component.contentViewId = previousRenderedNode.effectiveNativeViewId;
           }
         } else {
-          // Try a two-step approach that's more reliable - first reconcile to preserve structure,
-          // then ensure props are properly updated
-          await _reconcile(oldRenderedNode, newRenderedNode);
+          // Reconcile to preserve structure and update props efficiently
+          await _reconcile(previousRenderedNode, newRenderedNode);
           
           // Update contentViewId reference
-          component.contentViewId = oldRenderedNode.effectiveNativeViewId;
-          
-          // Update any TextNodes recursively to ensure they're refreshed
-          await _forceUpdateTextNodes(oldRenderedNode);
+          component.contentViewId = previousRenderedNode.effectiveNativeViewId;
         }
+        
+        // Clean up the stored previous rendered node
+        _previousRenderedNodes.remove(componentId);
       } else {
         // No previous rendering, create from scratch
         final parentViewId = _findParentViewId(component);
@@ -358,33 +365,6 @@ class VDom {
       if (kDebugMode) {
         developer.log('Error updating component: $e', 
             name: 'VDom', error: e, stackTrace: stack);
-      }
-    }
-  }
-  
-  /// Helper method to recursively force updates of text nodes
-  Future<void> _forceUpdateTextNodes(VDomNode node) async {
-    if (node is VDomElement) {
-      // Special handling for text elements to ensure they update
-      if (node.type == 'Text' && node.nativeViewId != null) {
-        if (node.props.containsKey('content')) {
-          final content = node.props['content'];
-          if (kDebugMode) {
-            print('Force updating text node ${node.nativeViewId}: $content');
-          }
-          await _nativeBridge.updateView(node.nativeViewId!, {'content': content});
-        }
-      }
-      
-      // Recursively process children
-      for (final child in node.children) {
-        await _forceUpdateTextNodes(child);
-      }
-    } else if (node is StatefulComponent || node is StatelessComponent) {
-      // Continue down to rendered content
-      final renderedNode = node.renderedNode;
-      if (renderedNode != null) {
-        await _forceUpdateTextNodes(renderedNode);
       }
     }
   }
@@ -612,6 +592,20 @@ class VDom {
         await _reconcile(oldRenderedNode, newRenderedNode);
       }
     }
+    // Handle Fragment nodes
+    else if (oldNode is Fragment && newNode is Fragment) {
+      // Transfer children relationships
+      newNode.parent = oldNode.parent;
+      
+      // Reconcile fragment children directly since fragments don't have native view IDs
+      if (oldNode.children.isNotEmpty || newNode.children.isNotEmpty) {
+        // Find the parent view ID to reconcile children against
+        final parentViewId = _findParentViewId(oldNode);
+        if (parentViewId != null) {
+          await _reconcileFragmentChildren(parentViewId, oldNode.children, newNode.children);
+        }
+      }
+    }
     // Handle empty nodes
     else if (oldNode is EmptyVDomNode && newNode is EmptyVDomNode) {
       // Nothing to do for empty nodes
@@ -783,6 +777,19 @@ class VDom {
     }
     
     return false;
+  }
+
+  /// Reconcile fragment children directly without a container element
+  Future<void> _reconcileFragmentChildren(String parentViewId, 
+      List<VDomNode> oldChildren, List<VDomNode> newChildren) async {
+    // Use the same reconciliation logic as elements but for fragment children
+    final hasKeys = _childrenHaveKeys(newChildren);
+    
+    if (hasKeys) {
+      await _reconcileKeyedChildren(parentViewId, oldChildren, newChildren);
+    } else {
+      await _reconcileSimpleChildren(parentViewId, oldChildren, newChildren);
+    }
   }
 
   /// Reconcile children with keys for optimal reordering
