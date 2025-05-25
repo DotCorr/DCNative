@@ -121,6 +121,9 @@ class YogaShadowTree {
         for (key, value) in props {
             applyLayoutProp(node: node, key: key, value: value)
         }
+        
+        // Validate layout configuration to prevent crashes
+        validateNodeLayoutConfig(nodeId: nodeId)
     }
     
     // Calculate and apply layout
@@ -137,17 +140,50 @@ class YogaShadowTree {
         YGNodeStyleSetWidth(root, Float(width))
         YGNodeStyleSetHeight(root, Float(height))
         
-        // Calculate layout
-        YGNodeCalculateLayout(root, Float(width), Float(height), YGDirection.LTR)
-        
-        // Apply layout to all views
+        // Pre-validate all nodes to prevent Yoga crashes
         for (nodeId, _) in nodes {
-            if let layout = getNodeLayout(nodeId: nodeId) {
-                applyLayoutToView(viewId: nodeId, frame: layout)
-            }
+            validateNodeLayoutConfig(nodeId: nodeId)
         }
         
-        return true
+        // Calculate layout with error handling
+        do {
+            // Use try-catch to handle potential Yoga exceptions
+            try {
+                YGNodeCalculateLayout(root, Float(width), Float(height), YGDirection.LTR)
+            }()
+            
+            // Apply layout to all views
+            for (nodeId, _) in nodes {
+                if let layout = getNodeLayout(nodeId: nodeId) {
+                    applyLayoutToView(viewId: nodeId, frame: layout)
+                }
+            }
+            return true
+        } catch {
+            print("❌ Layout calculation failed with error: \(error.localizedDescription)")
+            
+            // Emergency fallback - try to fix most common issues and retry once
+            fixLayoutErrors()
+            
+            // Try again with fixed layout
+            do {
+                try {
+                    YGNodeCalculateLayout(root, Float(width), Float(height), YGDirection.LTR)
+                }()
+                
+                // Apply layout to all views after recovery
+                for (nodeId, _) in nodes {
+                    if let layout = getNodeLayout(nodeId: nodeId) {
+                        applyLayoutToView(viewId: nodeId, frame: layout)
+                    }
+                }
+                print("✅ Layout recovered after fixing errors")
+                return true
+            } catch {
+                print("❌ Layout calculation failed even after recovery attempt: \(error)")
+                return false
+            }
+        }
     }
     
     // Get layout for a node
@@ -161,6 +197,22 @@ class YogaShadowTree {
         let height = CGFloat(YGNodeLayoutGetHeight(node))
         
         return CGRect(x: left, y: top, width: width, height: height)
+    }
+    
+    // Check and fix any invalid layout configuration issues
+    private func validateNodeLayoutConfig(nodeId: String) {
+        guard let node = nodes[nodeId] else { return }
+        
+        // Check if height is undefined and node has children
+        if YGNodeGetChildCount(node) > 0 && 
+           YGNodeStyleGetHeight(node).unit == YGUnit.undefined {
+            
+            // Prevent "availableHeight is indefinite" error by setting height sizing mode
+            // to YGMeasureModeAtMost when necessary
+            YGNodeStyleSetHeightAuto(node)
+            
+            print("⚠️ Layout Warning: Node \(nodeId) has children but undefined height, defaulting to height:auto")
+        }
     }
     
     // Apply a layout property to a node
@@ -491,6 +543,43 @@ class YogaShadowTree {
         }
     }
     
+    // Fix common layout errors that cause crashes
+    private func fixLayoutErrors() {
+        print("🔧 Attempting to fix layout errors...")
+        
+        for (nodeId, node) in nodes {
+            // Fix 1: Set auto height for nodes with children but undefined height
+            if YGNodeGetChildCount(node) > 0 && YGNodeStyleGetHeight(node).unit == YGUnit.undefined {
+                print("🔧 Setting auto height for node \(nodeId) to prevent availableHeight crash")
+                YGNodeStyleSetHeightAuto(node)
+            }
+            
+            // Fix 2: If a leaf node with no width/height, set reasonable defaults
+            if YGNodeGetChildCount(node) == 0 && 
+               YGNodeStyleGetHeight(node).unit == YGUnit.undefined &&
+               YGNodeStyleGetWidth(node).unit == YGUnit.undefined {
+                print("🔧 Setting minimum dimensions for leaf node \(nodeId)")
+                YGNodeStyleSetMinHeight(node, 1)
+                YGNodeStyleSetMinWidth(node, 1)
+            }
+            
+            // Fix 3: If node has flex but no defined dimensions, set flex basis auto
+            if YGNodeStyleGetFlex(node) != 0 && 
+               YGNodeStyleGetHeight(node).unit == YGUnit.undefined &&
+               YGNodeStyleGetWidth(node).unit == YGUnit.undefined {
+                print("🔧 Setting flexBasis:auto for flex node \(nodeId)")
+                YGNodeStyleSetFlexBasisAuto(node)
+            }
+            
+            // Fix 4: For rows with undefined height, set height:auto
+            if YGNodeStyleGetFlexDirection(node) == YGFlexDirection.row &&
+               YGNodeStyleGetHeight(node).unit == YGUnit.undefined {
+                print("🔧 Setting height:auto for row container \(nodeId)")
+                YGNodeStyleSetHeightAuto(node)
+            }
+        }
+    }
+
     // Helper to convert input values to Float
     private func convertToFloat(_ value: Any) -> Float? {
         if let num = value as? Float {

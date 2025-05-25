@@ -26,6 +26,9 @@ class DCFGo extends StatefulComponent {
             width: "100%",
             flexDirection: YogaFlexDirection.column,
           ),
+          horizontal: false,onScroll: (v){
+            print("scrolling: $v");
+          },
           children: [
             UserCard(
               onPress: () {
