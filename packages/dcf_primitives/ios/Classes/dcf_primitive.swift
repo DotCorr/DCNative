@@ -21,8 +21,6 @@ import dcflight
         // Register interaction primitives
         DCFComponentRegistry.shared.registerComponent("GestureDetector", componentClass: DCFGestureDetectorComponent.self)
         DCFComponentRegistry.shared.registerComponent("TouchableOpacity", componentClass: DCFTouchableOpacityComponent.self)
-        DCFComponentRegistry.shared.registerComponent("PageView", componentClass: DCFPageViewComponent.self)
-        
         // Register animation primitives
         DCFComponentRegistry.shared.registerComponent("AnimatedView", componentClass: DCFAnimatedViewComponent.self)
         DCFComponentRegistry.shared.registerComponent("AnimatedText", componentClass: DCFAnimatedTextComponent.self)
