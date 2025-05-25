@@ -674,6 +674,14 @@ class VDom {
       // Find changed props using proper diffing algorithm
       final changedProps = _diffProps(oldElement.props, newElement.props);
       
+      // Add debugging for text components specifically
+      if (oldElement.type == 'Text' && kDebugMode) {
+        print('🔍 Text Component Prop Diff:');
+        print('  Old props: ${oldElement.props}');
+        print('  New props: ${newElement.props}');
+        print('  Changed props being sent to native: $changedProps');
+      }
+      
       // Update props if there are changes
       if (changedProps.isNotEmpty) {
         if (kDebugMode) {
