@@ -56,6 +56,12 @@ class LayoutProps {
   // Direction
   final YogaDirection? direction;
 
+  // Modern layout properties
+  final double? aspectRatio;
+  final dynamic gap;
+  final dynamic rowGap;
+  final dynamic columnGap;
+
 @Deprecated("Use borderWidth from style instead")
   // Border (although visual, it affects layout)
   final dynamic borderWidth;
@@ -101,6 +107,10 @@ class LayoutProps {
     this.display = YogaDisplay.flex,
     this.overflow = YogaOverflow.visible,
     this.direction,
+    this.aspectRatio,
+    this.gap,
+    this.rowGap,
+    this.columnGap,
     this.borderWidth,
   });
 
@@ -144,6 +154,10 @@ class LayoutProps {
         display != null ||
         overflow != null ||
         direction != null ||
+        aspectRatio != null ||
+        gap != null ||
+        rowGap != null ||
+        columnGap != null ||
         borderWidth != null;
   }
 
@@ -229,6 +243,12 @@ class LayoutProps {
       map['direction'] = direction.toString().split('.').last;
     }
 
+    // Add modern layout properties
+    if (aspectRatio != null) map['aspectRatio'] = aspectRatio;
+    if (gap != null) map['gap'] = gap;
+    if (rowGap != null) map['rowGap'] = rowGap;
+    if (columnGap != null) map['columnGap'] = columnGap;
+
     // Add border width (affects layout)
     if (borderWidth != null) map['borderWidth'] = borderWidth;
 
@@ -276,6 +296,10 @@ class LayoutProps {
       display: other.display ?? display,
       overflow: other.overflow ?? overflow,
       direction: other.direction ?? direction,
+      aspectRatio: other.aspectRatio ?? aspectRatio,
+      gap: other.gap ?? gap,
+      rowGap: other.rowGap ?? rowGap,
+      columnGap: other.columnGap ?? columnGap,
       borderWidth: other.borderWidth ?? borderWidth,
     );
   }
@@ -320,6 +344,10 @@ class LayoutProps {
     YogaDisplay? display,
     YogaOverflow? overflow,
     YogaDirection? direction,
+    double? aspectRatio,
+    dynamic gap,
+    dynamic rowGap,
+    dynamic columnGap,
     dynamic borderWidth,
   }) {
     return LayoutProps(
@@ -361,6 +389,10 @@ class LayoutProps {
       display: display ?? this.display,
       overflow: overflow ?? this.overflow,
       direction: direction ?? this.direction,
+      aspectRatio: aspectRatio ?? this.aspectRatio,
+      gap: gap ?? this.gap,
+      rowGap: rowGap ?? this.rowGap,
+      columnGap: columnGap ?? this.columnGap,
       borderWidth: borderWidth ?? this.borderWidth,
     );
   }
@@ -405,13 +437,12 @@ class LayoutProps {
     'display',
     'overflow',
     'direction',
+    'aspectRatio',
+    'gap',
+    'rowGap',
+    'columnGap',
     'borderWidth',
   ];
-
-  /// Helper method to check if a property is a layout property
-  static bool isLayoutProperty(String propName) {
-    return all.contains(propName);
-  }
 
   /// Parse a dimension value that could be a number or percentage string
   static dynamic parseDimensionValue(dynamic value) {

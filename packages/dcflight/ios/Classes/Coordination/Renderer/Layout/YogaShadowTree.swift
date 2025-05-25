@@ -470,6 +470,22 @@ class YogaShadowTree {
             if let borderWidth = convertToFloat(value) {
                 YGNodeStyleSetBorder(node, YGEdge.all, borderWidth)
             }
+        case "aspectRatio":
+            if let aspectRatio = convertToFloat(value) {
+                YGNodeStyleSetAspectRatio(node, aspectRatio)
+            }
+        case "gap":
+            if let gap = convertToFloat(value) {
+                YGNodeStyleSetGap(node, YGGutter.all, gap)
+            }
+        case "rowGap":
+            if let rowGap = convertToFloat(value) {
+                YGNodeStyleSetGap(node, YGGutter.row, rowGap)
+            }
+        case "columnGap":
+            if let columnGap = convertToFloat(value) {
+                YGNodeStyleSetGap(node, YGGutter.column, columnGap)
+            }
         default:
             break
         }
