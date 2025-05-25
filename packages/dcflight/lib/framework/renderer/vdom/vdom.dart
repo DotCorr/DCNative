@@ -564,20 +564,9 @@ class VDom {
       final oldRenderedNode = oldNode.renderedNode;
       final newRenderedNode = newNode.renderedNode;
       
-      if (oldRenderedNode != null && newRenderedNode != null) {
-        // Standard reconciliation for components
-        await _reconcile(oldRenderedNode, newRenderedNode);
-      } else if (newRenderedNode != null) {
-        // Old rendered node is null but new one exists - create from scratch
-        final parentViewId = _findParentViewId(newNode);
-        if (parentViewId != null) {
-          final newViewId = await renderToNative(newRenderedNode, parentViewId: parentViewId);
-          if (newViewId != null) {
-            newNode.contentViewId = newViewId;
-          }
+      // Standard reconciliation for components
+      await _reconcile(oldRenderedNode, newRenderedNode);
         }
-      }
-    }
     // Handle stateless components
     else if (oldNode is StatelessComponent && newNode is StatelessComponent) {
       // Transfer IDs
@@ -588,10 +577,8 @@ class VDom {
       final oldRenderedNode = oldNode.renderedNode;
       final newRenderedNode = newNode.renderedNode;
       
-      if (oldRenderedNode != null && newRenderedNode != null) {
-        await _reconcile(oldRenderedNode, newRenderedNode);
-      }
-    }
+      await _reconcile(oldRenderedNode, newRenderedNode);
+        }
     // Handle Fragment nodes
     else if (oldNode is Fragment && newNode is Fragment) {
       // Transfer children relationships
