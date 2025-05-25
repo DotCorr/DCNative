@@ -241,8 +241,8 @@ class VDom {
         // Commit all batched updates at once
         await _nativeBridge.commitBatchUpdate();
         
-        // Calculate layout at the end for all updates at once
-        await calculateAndApplyLayout();
+        // Layout is now calculated automatically when layout props change
+        // No manual layout calculation needed
       } catch (e) {
         // Cancel batch if there's an error
         await _nativeBridge.cancelBatchUpdate();
@@ -369,14 +369,8 @@ class VDom {
     }
   }
 
-  /// Calculate and apply layout
-  Future<void> calculateAndApplyLayout({double? width, double? height}) async {
-    await isReady;
-    final success = await _nativeBridge.calculateLayout();
-    if (!success && kDebugMode) {
-      developer.log('⚠️ Layout calculation failed', name: 'VDom');
-    }
-  }
+  // REMOVED: calculateAndApplyLayout method
+  // Layout is now calculated automatically when layout props change
 
   /// Render a node to native UI
   Future<String?> renderToNative(VDomNode node,
@@ -935,8 +929,8 @@ class VDom {
     // Render to native
     await renderToNative(component, parentViewId: "root");
     
-    // Calculate layout
-    await calculateAndApplyLayout();
+    // Layout is now calculated automatically when layout props change
+    // No manual layout calculation needed
     
     if (kDebugMode) {
       print('VDOM is ready to calculate');

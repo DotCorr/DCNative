@@ -60,11 +60,8 @@ class VDomAPI {
     );
   }
   
-  /// Calculate and apply layout
-  Future<void> calculateLayout() async {
-    await isReady;
-    return _vdom.calculateAndApplyLayout();
-  }
+  // REMOVED: calculateLayout method
+  // Layout is now calculated automatically when layout props change
   
   /// Render a node to native UI
   Future<String?> renderToNative(VDomNode node,

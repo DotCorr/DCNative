@@ -20,13 +20,10 @@ import UIKit
         // Set up method channels directly through the registrar
         let messenger = registrar.messenger()
         
-        // Initialize method channels for bridge, events, and layout
+        // Initialize method channels for bridge and events
         DCMauiBridgeMethodChannel.shared.initialize(with: messenger)
         DCMauiEventMethodHandler.shared.initialize(with: messenger)
-        DCMauiLayoutMethodHandler.shared.initialize(with: messenger)
-        
-        // Initialize screen utilities
-        DCFScreenUtilities.shared.initialize(with: messenger)
+        // Note: Layout is now handled natively, no need for layout method channel
     }
     
     override open func application(

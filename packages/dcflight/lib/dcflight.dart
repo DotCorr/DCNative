@@ -69,10 +69,9 @@ class DCFlight {
     
     // Wait for the VDom to be ready
     vdom.isReady.whenComplete(() async {
-      debugPrint('VDOM is ready to calculate');
-      await vdom.calculateLayout().then((_) {
-        debugPrint('VDOM layout applied from entry point');
-      });
+      debugPrint('VDOM is ready - layout will be calculated automatically');
+      // Layout is now calculated automatically when layout props change
+      // No manual layout calculation needed
     });
   }
 
