@@ -23,7 +23,7 @@ export 'framework/protocol/component_registry.dart';
 export 'framework/protocol/plugin_protocol.dart';
 
 
-import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
+import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 
 import 'framework/renderer/vdom/vdom_api.dart'; 
 import 'framework/renderer/interface/interface.dart';
@@ -55,7 +55,7 @@ class DCFlight {
   }
   
   /// Start the application with the given root component
-  static Future<void> start({required VDomNode app}) async {
+  static Future<void> start({required DCFComponentNode app}) async {
     await _initialize();
     
     // Get the VDOM API instance

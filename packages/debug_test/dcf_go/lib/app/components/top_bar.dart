@@ -6,7 +6,7 @@ class TopBar extends StatefulComponent {
   final StateHook<int> counter;
   TopBar({super.key, required this.globalCounter, required this.counter});
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     return DCFView(
       layout: LayoutProps(
         height: 100,

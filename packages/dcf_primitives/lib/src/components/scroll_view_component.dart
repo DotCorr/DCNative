@@ -3,7 +3,7 @@ import 'package:dcflight/dcflight.dart';
 /// A scroll view component implementation using StatelessComponent
 class DCFScrollView extends StatelessComponent {
   /// Child nodes
-  final List<VDomNode> children;
+  final List<DCFComponentNode> children;
   
   /// Whether to scroll horizontally
   final bool horizontal;
@@ -40,7 +40,7 @@ class DCFScrollView extends StatelessComponent {
   });
   
     @override
-  VDomNode render() {
+  DCFComponentNode render() {
     // Create an events map for callbacks
     Map<String, dynamic> eventMap = events ?? {};
     
@@ -48,7 +48,7 @@ class DCFScrollView extends StatelessComponent {
       eventMap['onScroll'] = onScroll;
     }
     
-    return VDomElement(
+    return DCFElement(
       type: 'ScrollView',
       props: {
         'horizontal': horizontal,

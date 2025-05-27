@@ -9,7 +9,7 @@ class DCFView extends StatelessComponent {
   final StyleSheet style;
   
   /// Child nodes
-  final List<VDomNode> children;
+  final List<DCFComponentNode> children;
   
   /// Event handlers
   final Map<String, dynamic>? events;
@@ -24,8 +24,8 @@ class DCFView extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
-    return VDomElement(
+  DCFComponentNode render() {
+    return DCFElement(
       type: 'View',
       props: {
      

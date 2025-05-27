@@ -78,8 +78,8 @@ class DCFText extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
-    return VDomElement(
+  DCFComponentNode render() {
+    return DCFElement(
       type: 'Text',
       props: {
         'content': content,

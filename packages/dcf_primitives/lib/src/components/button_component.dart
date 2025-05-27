@@ -63,7 +63,7 @@ class DCFButton extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     // Create an events map for the onPress handler
     Map<String, dynamic> eventMap = events ?? {};
     
@@ -71,7 +71,7 @@ class DCFButton extends StatelessComponent {
       eventMap['onPress'] = onPress;
     }
     
-    return VDomElement(
+    return DCFElement(
       type: 'Button',
       props: {
         ...buttonProps.toMap(),

@@ -1,10 +1,10 @@
 /// Base class for all Virtual DOM nodes
-abstract class VDomNode {
+abstract class DCFComponentNode{
   /// Unique identifier for this node
   final String? key;
 
   /// Parent node in the virtual tree
-  VDomNode? parent;
+  DCFComponentNode? parent;
 
   /// Native view ID once rendered
   String? nativeViewId;
@@ -13,17 +13,17 @@ abstract class VDomNode {
   String? contentViewId;
   
   /// The rendered node from the component (for component nodes)
-  VDomNode? _renderedNode;
+  DCFComponentNode? _renderedNode;
 
-  VDomNode({this.key});
+  DCFComponentNode({this.key});
 
   /// Clone this node
-  VDomNode clone();
+  DCFComponentNode clone();
 
   /// Whether this node is equal to another
-  bool equals(VDomNode other);
+  bool equals(DCFComponentNode other);
 
-  void mount(VDomNode? parent);
+  void mount(DCFComponentNode? parent);
   void unmount();
   
   /// Called when the node is mounted (lifecycle method)
@@ -37,10 +37,10 @@ abstract class VDomNode {
   }
   
   /// Get the rendered node (for component-like nodes)
-  VDomNode? get renderedNode => _renderedNode;
+  DCFComponentNode? get renderedNode => _renderedNode;
   
   /// Set the rendered node (for component-like nodes)
-  set renderedNode(VDomNode? node) {
+  set renderedNode(DCFComponentNode? node) {
     _renderedNode = node;
     if (_renderedNode != null) {
       _renderedNode!.parent = this;
@@ -60,20 +60,20 @@ abstract class VDomNode {
 }
 
 /// Represents absence of a node - useful for conditional rendering
-class EmptyVDomNode extends VDomNode {
+class EmptyVDomNode extends DCFComponentNode {
   EmptyVDomNode() : super(key: null);
 
   @override
-  VDomNode clone() => EmptyVDomNode();
+  DCFComponentNode clone() => EmptyVDomNode();
 
   @override
-  bool equals(VDomNode other) => other is EmptyVDomNode;
+  bool equals(DCFComponentNode other) => other is EmptyVDomNode;
 
   @override
   String toString() => 'EmptyVDomNode()';
 
   @override
-  void mount(VDomNode? parent) {
+  void mount(DCFComponentNode? parent) {
     this.parent = parent;
     // Empty node has no additional mounting logic
   }

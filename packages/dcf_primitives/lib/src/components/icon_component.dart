@@ -5,16 +5,16 @@ export 'package:dcf_primitives/src/components/dictionary/dcf_icons_dict.dart';
 class IconProps {
   /// The name of the icon
   final String name;
-  
+
   /// Size of the icon
   // final double size;
-  
+
   /// Color of the icon
   final Color? color;
-  
+
   /// Package where the icon is defined
   final String package;
-  
+
   /// Create icon props
   const IconProps({
     required this.name,
@@ -22,7 +22,7 @@ class IconProps {
     this.color,
     this.package = 'dcf_primitives',
   });
-  
+
   /// Convert to props map
   Map<String, dynamic> toMap() {
     return {
@@ -39,49 +39,47 @@ class IconProps {
 class DCFIcon extends StatelessComponent {
   /// The icon properties
   final IconProps iconProps;
-  
+
   /// The layout properties
   final LayoutProps layout;
-  
+
   /// The style properties
   final StyleSheet style;
-  
+
   /// Event handlers
   final Map<String, dynamic>? events;
-  
+
   /// Load event handler
   final Function? onLoad;
-  
+
   /// Error event handler
   final Function? onError;
-  
+
   /// Create an icon component
   DCFIcon({
     required this.iconProps,
-       this.layout = const LayoutProps(
-      flex: 1
-    ),
+    this.layout = const LayoutProps(height: 12, width: 12, flex: 1),
     this.style = const StyleSheet(),
     this.onLoad,
     this.onError,
     this.events,
     super.key,
   });
-  
+
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     // Create an events map for callbacks
     Map<String, dynamic> eventMap = events ?? {};
-    
+
     if (onLoad != null) {
       eventMap['onLoad'] = onLoad;
     }
-    
+
     if (onError != null) {
       eventMap['onError'] = onError;
     }
-    
-    return VDomElement(
+
+    return DCFElement(
       type: 'DCFIcon',
       props: {
         ...iconProps.toMap(),

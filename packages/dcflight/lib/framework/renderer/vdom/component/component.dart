@@ -1,11 +1,11 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
+import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 import 'state_hook.dart';
 import 'store.dart';
 
 /// Stateful component with hooks and lifecycle methods
-abstract class StatefulComponent extends VDomNode {
+abstract class StatefulComponent extends DCFComponentNode {
   /// Unique ID for this component instance
   final String instanceId;
 
@@ -13,7 +13,7 @@ abstract class StatefulComponent extends VDomNode {
   final String typeName;
 
   /// The rendered node from the component
-  VDomNode? _renderedNode;
+  DCFComponentNode? _renderedNode;
 
   /// Whether the component is mounted
   bool _isMounted = false;
@@ -29,8 +29,7 @@ abstract class StatefulComponent extends VDomNode {
 
   /// Create a stateful component
   StatefulComponent({super.key})
-      : instanceId = DateTime.now().millisecondsSinceEpoch.toString() +
-            '.' + Random().nextDouble().toString(),
+      : instanceId = '${DateTime.now().millisecondsSinceEpoch}.${Random().nextDouble()}',
         typeName = StackTrace.current.toString().split('\n')[1].split(' ')[0] {
     scheduleUpdate = _defaultScheduleUpdate;
   }
@@ -43,11 +42,11 @@ abstract class StatefulComponent extends VDomNode {
   }
 
   /// Render the component - must be implemented by subclasses
-  VDomNode render();
+  DCFComponentNode render();
   
   /// Get the rendered node (lazily render if necessary)
   @override
-  VDomNode get renderedNode {
+  DCFComponentNode get renderedNode {
     if (_renderedNode == null) {
       prepareForRender();
       _renderedNode = render();
@@ -61,7 +60,7 @@ abstract class StatefulComponent extends VDomNode {
   
   /// Set the rendered node
   @override
-  set renderedNode(VDomNode? node) {
+  set renderedNode(DCFComponentNode? node) {
     _renderedNode = node;
     if (_renderedNode != null) {
       _renderedNode!.parent = this;
@@ -174,20 +173,20 @@ abstract class StatefulComponent extends VDomNode {
   /// Implement VDomNode methods
   
   @override
-  VDomNode clone() {
+  DCFComponentNode clone() {
     // Components can't be cloned easily due to state, hooks, etc.
     throw UnsupportedError("Stateful components cannot be cloned directly.");
   }
   
   @override
-  bool equals(VDomNode other) {
+  bool equals(DCFComponentNode other) {
     if (other is! StatefulComponent) return false;
     // Components are considered equal if they're the same type with the same key
     return runtimeType == other.runtimeType && key == other.key;
   }
   
   @override
-  void mount(VDomNode? parent) {
+  void mount(DCFComponentNode? parent) {
     this.parent = parent;
     
     // Ensure the component has rendered
@@ -216,7 +215,7 @@ abstract class StatefulComponent extends VDomNode {
 }
 
 /// Stateless component without hooks or state
-abstract class StatelessComponent extends VDomNode {
+abstract class StatelessComponent extends DCFComponentNode {
   /// Unique ID for this component instance
   final String instanceId;
 
@@ -224,23 +223,22 @@ abstract class StatelessComponent extends VDomNode {
   final String typeName;
 
   /// The rendered node from the component
-  VDomNode? _renderedNode;
+  DCFComponentNode? _renderedNode;
 
   /// Whether the component is mounted
   bool _isMounted = false;
 
   /// Create a stateless component
   StatelessComponent({super.key})
-      : instanceId = DateTime.now().millisecondsSinceEpoch.toString() +
-            '.' + Random().nextDouble().toString(),
+      : instanceId = '${DateTime.now().millisecondsSinceEpoch}.${Random().nextDouble()}',
         typeName = StackTrace.current.toString().split('\n')[1].split(' ')[0];
 
   /// Render the component - must be implemented by subclasses
-  VDomNode render();
+  DCFComponentNode render();
   
   /// Get the rendered node (lazily render if necessary)
   @override
-  VDomNode get renderedNode {
+  DCFComponentNode get renderedNode {
     _renderedNode ??= render();
     
     if (_renderedNode != null) {
@@ -252,7 +250,7 @@ abstract class StatelessComponent extends VDomNode {
   
   /// Set the rendered node
   @override
-  set renderedNode(VDomNode? node) {
+  set renderedNode(DCFComponentNode? node) {
     _renderedNode = node;
     if (_renderedNode != null) {
       _renderedNode!.parent = this;
@@ -277,20 +275,20 @@ abstract class StatelessComponent extends VDomNode {
   /// Implement VDomNode methods
   
   @override
-  VDomNode clone() {
+  DCFComponentNode clone() {
     // Components can't be cloned easily
     throw UnsupportedError("Stateless components cannot be cloned directly.");
   }
   
   @override
-  bool equals(VDomNode other) {
+  bool equals(DCFComponentNode other) {
     if (other is! StatelessComponent) return false;
     // Components are equal if they're the same type with the same key
     return runtimeType == other.runtimeType && key == other.key;
   }
   
   @override
-  void mount(VDomNode? parent) {
+  void mount(DCFComponentNode? parent) {
     this.parent = parent;
     
     // Ensure the component has rendered

@@ -7,14 +7,14 @@ import 'package:dcflight/dcflight.dart';
 
 class DCFGo extends StatefulComponent {
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     final globalCounter = useStore(globalCounterState);
     final counter = useState(0);
     return Fragment(
       children: [
         TopBar(globalCounter: globalCounter, counter: counter),
-        DCFScrollView(
-          showsScrollIndicator: true,
+        DCFView(
+          // showsScrollIndicator: true,
           style: StyleSheet(
             backgroundColor:
                 counter.value % 2 == 0 ? Colors.amber : Colors.white,
@@ -26,9 +26,9 @@ class DCFGo extends StatefulComponent {
             width: "100%",
             flexDirection: YogaFlexDirection.column,
           ),
-          horizontal: false,onScroll: (v){
-            print("scrolling: $v");
-          },
+          // horizontal: false,onScroll: (v){
+          //   print("scrolling: $v");
+          // },
           children: [
             UserCard(
               onPress: () {
@@ -40,7 +40,7 @@ class DCFGo extends StatefulComponent {
               },
             ),
             UserCard(
-              onPress: () {
+              onPress: () { 
                 print("touchable pressed, maybe state woud change");
                 print("counter value: ${counter.value}");
                 print("global counter value: ${globalCounter.state}");
@@ -68,7 +68,7 @@ class DCFGo extends StatefulComponent {
             ),
           ],
         ),
-        GobalStateCounterComp(),
+        Footer(),
       ],
     );
   }

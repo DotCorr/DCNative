@@ -39,7 +39,7 @@ class DCFAnimatedText extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     // Create an events map for callbacks
     Map<String, dynamic> eventMap = events ?? {};
     
@@ -47,7 +47,7 @@ class DCFAnimatedText extends StatelessComponent {
       eventMap['onAnimationEnd'] = onAnimationEnd;
     }
     
-    return VDomElement(
+    return DCFElement(
       type: 'AnimatedText',
       props: {
         'content': content,

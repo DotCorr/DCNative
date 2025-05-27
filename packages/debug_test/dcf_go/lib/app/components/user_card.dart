@@ -10,7 +10,7 @@ class UserCard extends StatelessComponent {
 
   });
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     return DCFTouchableOpacity(
       activeOpacity: 0.5,
       onPress:onPress,

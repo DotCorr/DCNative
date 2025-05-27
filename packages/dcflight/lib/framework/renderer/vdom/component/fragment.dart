@@ -1,9 +1,9 @@
-import '../vdom_node.dart';
+import 'component_node.dart';
 
 /// Fragment component that renders multiple children without a container
-class Fragment extends VDomNode {
+class Fragment extends DCFComponentNode {
   /// Child nodes
-  final List<VDomNode> children;
+  final List<DCFComponentNode> children;
 
   Fragment({
     required this.children,
@@ -11,7 +11,7 @@ class Fragment extends VDomNode {
   });
 
   @override
-  VDomNode clone() {
+  DCFComponentNode clone() {
     return Fragment(
       children: children.map((child) => child.clone()).toList(),
       key: key,
@@ -19,12 +19,12 @@ class Fragment extends VDomNode {
   }
 
   @override
-  bool equals(VDomNode other) {
+  bool equals(DCFComponentNode other) {
     return other is Fragment && key == other.key;
   }
 
   @override
-  void mount(VDomNode? parent) {
+  void mount(DCFComponentNode? parent) {
     this.parent = parent;
 
     // Mount all children

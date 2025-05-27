@@ -7,8 +7,8 @@ import 'package:dcflight/framework/renderer/interface/interface.dart' show Platf
 import 'package:dcflight/framework/renderer/vdom/component/component.dart';
 import 'package:dcflight/framework/renderer/vdom/component/error_boundary.dart';
 export 'package:dcflight/framework/renderer/vdom/component/store.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_element.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
+import 'package:dcflight/framework/renderer/vdom/component/dcf_element.dart';
+import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 import 'package:dcflight/framework/renderer/vdom/component/fragment.dart';
 
 /// Virtual DOM implementation with efficient reconciliation and state handling
@@ -23,7 +23,7 @@ class VDom {
   int _viewIdCounter = 1;
   
   /// Map of view IDs to their associated VDomNodes
-  final Map<String, VDomNode> _nodesByViewId = {};
+  final Map<String, DCFComponentNode> _nodesByViewId = {};
   
   /// Map to track component instances by their instance ID
   final Map<String, StatefulComponent> _statefulComponents = {};
@@ -32,7 +32,7 @@ class VDom {
   final Map<String, StatelessComponent> _statelessComponents = {};
   
   /// Map to track previous rendered nodes for components (for proper reconciliation)
-  final Map<String, VDomNode> _previousRenderedNodes = {};
+  final Map<String, DCFComponentNode> _previousRenderedNodes = {};
   
   /// Pending component updates for batching
   final Set<String> _pendingUpdates = {};
@@ -44,7 +44,7 @@ class VDom {
   bool _batchUpdateInProgress = false;
   
   /// Root component for the application
-  VDomNode? rootComponent;
+  DCFComponentNode? rootComponent;
   
   /// Error boundary registry
   final Map<String, ErrorBoundary> _errorBoundaries = {};
@@ -89,7 +89,7 @@ class VDom {
   }
   
   /// Register a component in the VDOM
-  void registerComponent(VDomNode component) {
+  void registerComponent(DCFComponentNode component) {
     if (component is StatefulComponent) {
       _statefulComponents[component.instanceId] = component;
       component.scheduleUpdate = () => _scheduleComponentUpdate(component);
@@ -114,7 +114,7 @@ class VDom {
       return;
     }
 
-    if (node is VDomElement) {
+    if (node is DCFElement) {
       // Try direct event handler match
       if (node.props.containsKey(eventType) && node.props[eventType] is Function) {
         _executeEventHandler(node.props[eventType], eventData);
@@ -168,7 +168,7 @@ class VDom {
     _pendingUpdates.add(component.instanceId);
     
     // Find the root component from this component
-    VDomNode? rootComponentCandidate = component;
+    DCFComponentNode? rootComponentCandidate = component;
     while (rootComponentCandidate != null && rootComponentCandidate.parent != null) {
       rootComponentCandidate = rootComponentCandidate.parent;
     }
@@ -181,7 +181,7 @@ class VDom {
     }
     
     // Add the direct container component to ensure proper reconciliation
-    VDomNode? parent = component.parent;
+    DCFComponentNode? parent = component.parent;
     while (parent != null) {
       // Update parent components to propagate the changes up the tree
       if (parent is StatefulComponent) {
@@ -373,7 +373,7 @@ class VDom {
   // Layout is now calculated automatically when layout props change
 
   /// Render a node to native UI
-  Future<String?> renderToNative(VDomNode node,
+  Future<String?> renderToNative(DCFComponentNode node,
       {String? parentViewId, int? index}) async {
     await isReady;
 
@@ -446,7 +446,7 @@ class VDom {
         }
       } 
       // Handle Element nodes
-      else if (node is VDomElement) {
+      else if (node is DCFElement) {
         return await _renderElementToNative(node, parentViewId: parentViewId, index: index);
       } 
       // Handle EmptyVDomNode
@@ -465,7 +465,7 @@ class VDom {
   }
 
   /// Render an element to native UI
-  Future<String?> _renderElementToNative(VDomElement element,
+  Future<String?> _renderElementToNative(DCFElement element,
       {String? parentViewId, int? index}) async {
     // Use existing view ID or generate a new one
     final viewId = element.nativeViewId ?? _generateViewId();
@@ -514,7 +514,7 @@ class VDom {
   }
 
   /// Reconcile two nodes by efficiently updating only what changed
-  Future<void> _reconcile(VDomNode oldNode, VDomNode newNode) async {
+  Future<void> _reconcile(DCFComponentNode oldNode, DCFComponentNode newNode) async {
     // Transfer important parent reference first
     newNode.parent = oldNode.parent;
     
@@ -532,7 +532,7 @@ class VDom {
     }
 
     // Handle different node types
-    if (oldNode is VDomElement && newNode is VDomElement) {
+    if (oldNode is DCFElement && newNode is DCFElement) {
       // If different element types, we need to replace it
       if (oldNode.type != newNode.type) {
         await _replaceNode(oldNode, newNode);
@@ -597,7 +597,7 @@ class VDom {
   // No special handling for specific component types - all components are treated equally
   
   /// Replace a node entirely
-  Future<void> _replaceNode(VDomNode oldNode, VDomNode newNode) async {
+  Future<void> _replaceNode(DCFComponentNode oldNode, DCFComponentNode newNode) async {
     // Can't replace if the old node has no view ID
     if (oldNode.effectiveNativeViewId == null) {
       return;
@@ -630,8 +630,8 @@ class VDom {
   }
 
   /// Find a node's parent view ID
-  String? _findParentViewId(VDomNode node) {
-    VDomNode? current = node.parent;
+  String? _findParentViewId(DCFComponentNode node) {
+    DCFComponentNode? current = node.parent;
     
     // Find the first parent with a native view ID
     while (current != null) {
@@ -647,19 +647,19 @@ class VDom {
   }
 
   /// Find a node's index in its parent's children
-  int _findNodeIndexInParent(VDomNode node) {
+  int _findNodeIndexInParent(DCFComponentNode node) {
     // Can't determine index without parent
     if (node.parent == null) return 0;
     
     // Only element parents can have indexed children
-    if (node.parent is! VDomElement) return 0;
+    if (node.parent is! DCFElement) return 0;
     
-    final parent = node.parent as VDomElement;
+    final parent = node.parent as DCFElement;
     return parent.children.indexOf(node);
   }
 
   /// Reconcile an element - update props and children
-  Future<void> _reconcileElement(VDomElement oldElement, VDomElement newElement) async {
+  Future<void> _reconcileElement(DCFElement oldElement, DCFElement newElement) async {
     // Update properties if the element has a native view
     if (oldElement.nativeViewId != null) {
       // Copy native view ID to new element for tracking
@@ -732,7 +732,7 @@ class VDom {
   }
 
   /// Reconcile children with keyed optimization
-  Future<void> _reconcileChildren(VDomElement oldElement, VDomElement newElement) async {
+  Future<void> _reconcileChildren(DCFElement oldElement, DCFElement newElement) async {
     final oldChildren = oldElement.children;
     final newChildren = newElement.children;
     
@@ -758,7 +758,7 @@ class VDom {
   }
 
   /// Check if any children have explicit keys
-  bool _childrenHaveKeys(List<VDomNode> children) {
+  bool _childrenHaveKeys(List<DCFComponentNode> children) {
     if (children.isEmpty) return false;
     
     for (var child in children) {
@@ -770,7 +770,7 @@ class VDom {
 
   /// Reconcile fragment children directly without a container element
   Future<void> _reconcileFragmentChildren(String parentViewId, 
-      List<VDomNode> oldChildren, List<VDomNode> newChildren) async {
+      List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
     // Use the same reconciliation logic as elements but for fragment children
     final hasKeys = _childrenHaveKeys(newChildren);
     
@@ -783,9 +783,9 @@ class VDom {
 
   /// Reconcile children with keys for optimal reordering
   Future<void> _reconcileKeyedChildren(String parentViewId, 
-      List<VDomNode> oldChildren, List<VDomNode> newChildren) async {
+      List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
     // Create map of old children by key for O(1) lookup
-    final oldChildrenMap = <String?, VDomNode>{};
+    final oldChildrenMap = <String?, DCFComponentNode>{};
     for (int i = 0; i < oldChildren.length; i++) {
       final oldChild = oldChildren[i];
       final key = oldChild.key ?? i.toString(); // Use index for null keys
@@ -794,7 +794,7 @@ class VDom {
     
     // Track children that need to be in final list
     final updatedChildIds = <String>[];
-    final processedOldChildren = <VDomNode>{};
+    final processedOldChildren = <DCFComponentNode>{};
     
     // Process each new child
     for (int i = 0; i < newChildren.length; i++) {
@@ -848,7 +848,7 @@ class VDom {
 
   /// Reconcile children without keys (simpler algorithm)
   Future<void> _reconcileSimpleChildren(String parentViewId, 
-      List<VDomNode> oldChildren, List<VDomNode> newChildren) async {
+      List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
     final updatedChildIds = <String>[];
     final commonLength = math.min(oldChildren.length, newChildren.length);
     
@@ -906,8 +906,8 @@ class VDom {
   }
 
   /// Find the nearest error boundary
-  ErrorBoundary? _findNearestErrorBoundary(VDomNode node) {
-    VDomNode? current = node;
+  ErrorBoundary? _findNearestErrorBoundary(DCFComponentNode node) {
+    DCFComponentNode? current = node;
     
     while (current != null) {
       if (current is ErrorBoundary) {
@@ -920,7 +920,7 @@ class VDom {
   }
 
   /// Create the root component for the application
-  Future<void> createRoot(VDomNode component) async {
+  Future<void> createRoot(DCFComponentNode component) async {
     rootComponent = component;
     
     // Register the component with this VDOM

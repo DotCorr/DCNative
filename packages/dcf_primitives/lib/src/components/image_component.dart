@@ -68,7 +68,7 @@ class DCFImage extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     // Create an events map for callbacks
     Map<String, dynamic> eventMap = events ?? {};
     
@@ -80,7 +80,7 @@ class DCFImage extends StatelessComponent {
       eventMap['onError'] = onError;
     }
     
-    return VDomElement(
+    return DCFElement(
       type: 'Image',
       props: {
         ...imageProps.toMap(),

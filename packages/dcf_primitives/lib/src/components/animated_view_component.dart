@@ -3,7 +3,7 @@ import 'package:dcflight/dcflight.dart';
 /// An animated view component implementation using StatelessComponent
 class DCFAnimatedView extends StatelessComponent {
   /// Child nodes
-  final List<VDomNode> children;
+  final List<DCFComponentNode> children;
   
   /// The layout properties
   final LayoutProps layout;
@@ -32,7 +32,7 @@ class DCFAnimatedView extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     // Create an events map for callbacks
     Map<String, dynamic> eventMap = events ?? {};
     
@@ -40,7 +40,7 @@ class DCFAnimatedView extends StatelessComponent {
       eventMap['onAnimationEnd'] = onAnimationEnd;
     }
     
-    return VDomElement(
+    return DCFElement(
       type: 'AnimatedView',
       props: {
         'animation': animation,

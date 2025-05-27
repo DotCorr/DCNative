@@ -1,6 +1,6 @@
 import 'package:dcflight/framework/protocol/component_protocol.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_element.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
+import 'package:dcflight/framework/renderer/vdom/component/dcf_element.dart';
+import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 import 'package:flutter/foundation.dart';
 
 /// Registry for component factories
@@ -44,7 +44,7 @@ class ComponentRegistry {
   }
   
   /// Create a component instance with the given type, props and children
-  VDomElement create(String type, Map<String, dynamic> props, List<VDomNode> children) {
+  DCFElement create(String type, Map<String, dynamic> props, List<DCFComponentNode> children) {
     final factory = _factories[type];
     if (factory == null) {
       throw Exception('Component factory not found: $type');
