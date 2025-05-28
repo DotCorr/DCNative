@@ -1,5 +1,5 @@
+import 'package:dcf_go/app/components/bunch_cards.dart';
 import 'package:dcf_go/app/components/footer.dart';
-import 'package:dcf_go/app/components/user_card.dart';
 import 'package:dcf_go/app/pages/scan.dart';
 import 'package:dcf_go/app/store.dart';
 import 'package:dcf_go/app/components/top_bar.dart';
@@ -11,6 +11,9 @@ class DCFGo extends StatefulComponent {
   DCFComponentNode render() {
     final globalCounter = useStore(globalCounterState);
     final counter = useState(0);
+    useEffect(() {
+      return null;
+    }, dependencies: []);
     return tabIndexCount.state == 0
         ? DCFView(
           layout: LayoutProps(flex: 1),
@@ -23,56 +26,70 @@ class DCFGo extends StatefulComponent {
                     counter.value % 2 == 0 ? Colors.amber : Colors.white,
               ),
               layout: LayoutProps(
+                padding: 8,
                 paddingHorizontal: 20,
-                justifyContent: YogaJustifyContent.spaceBetween,
+                justifyContent: YogaJustifyContent.spaceAround,
+                gap: 10,
                 flex: 1,
                 width: "100%",
                 flexDirection: YogaFlexDirection.column,
               ),
-              horizontal: false,
+
               onScroll: (v) {
                 print("scrolling: $v");
               },
               children: [
-                UserCard(
-                  onPress: () {
-                    print("touchable pressed, maybe state woud change");
-                    print("counter value: ${counter.value}");
-                    print("global counter value: ${globalCounter.state}");
-                    counter.setValue(counter.value + 1);
-                    globalCounter.setState(globalCounter.state + 1);
-                  },
+                DCFScrollView(
+                  horizontal: true,
+                  children: bunchCards(),
+                  layout: LayoutProps(
+                    flex: 2,
+                    flexDirection: YogaFlexDirection.row,
+                  ),
                 ),
-                UserCard(
-                  onPress: () {
-                    print("touchable pressed, maybe state woud change");
-                    print("counter value: ${counter.value}");
-                    print("global counter value: ${globalCounter.state}");
-                    counter.setValue(counter.value + 1);
-                    globalCounter.setState(globalCounter.state + 1);
-                  },
-                ),
-                UserCard(
-                  onPress: () {
-                    print("touchable pressed, maybe state woud change");
-                    print("counter value: ${counter.value}");
-                    print("global counter value: ${globalCounter.state}");
-                    counter.setValue(counter.value + 1);
-                    globalCounter.setState(globalCounter.state + 1);
-                  },
-                ),
-                UserCard(
-                  onPress: () {
-                    print("touchable pressed, maybe state woud change");
-                    print("counter value: ${counter.value}");
-                    print("global counter value: ${globalCounter.state}");
-                    counter.setValue(counter.value + 1);
-                    globalCounter.setState(globalCounter.state + 1);
-                  },
+                DCFScrollView(
+                  layout: LayoutProps(flex: 6),
+                  children: bunchCards(),
                 ),
               ],
             ),
             Footer(),
+            DCFTouchableOpacity(
+              onPress: () {
+                counter.setValue(counter.value + 1);
+              },
+              children: [
+                DCFView(
+                  layout: LayoutProps(
+                    flex: 1,
+                    alignItems: YogaAlign.center,
+                    justifyContent: YogaJustifyContent.center,
+                  ),
+                  style: StyleSheet(
+                    borderRadius: 20,
+                    backgroundColor: Colors.blue,
+                    shadowColor: Colors.black,
+                    shadowRadius: 2,
+                    shadowOffsetX: 2,
+                  ),
+                  children: [
+                    DCFIcon(iconProps: IconProps(name: DCFIcons.plus)),
+                  ],
+                ),
+              ],
+              layout: LayoutProps(
+                alignItems: YogaAlign.center,
+                justifyContent: YogaJustifyContent.center,
+                marginBottom: 80,
+                marginRight: 10,
+                height: 50,
+                width: 50,
+                position: YogaPositionType.absolute,
+                bottom: 1,
+                right: 1,
+              ),
+              style: StyleSheet(borderRadius: 20),
+            ),
           ],
         )
         : ScanPage();

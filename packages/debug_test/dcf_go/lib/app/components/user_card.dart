@@ -15,6 +15,7 @@ class UserCard extends StatelessComponent {
       activeOpacity: 0.5,
       onPress:onPress,
       layout: LayoutProps(
+        margin: 2,
         height: 120,
         width: "100%",
         alignContent: YogaAlign.stretch,
@@ -32,7 +33,7 @@ class UserCard extends StatelessComponent {
             justifyContent: YogaJustifyContent.spaceAround,
             alignItems: YogaAlign.center,
           ),
-          style: StyleSheet(borderRadius: 15,backgroundColor: Colors.grey[100]),
+          style: StyleSheet(borderRadius: 15,backgroundColor: Colors.grey[300]),
           children: [
             DCFImage(
               imageProps: ImageProps(

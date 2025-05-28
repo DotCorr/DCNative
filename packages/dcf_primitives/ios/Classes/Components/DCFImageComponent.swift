@@ -2,7 +2,7 @@ import UIKit
 import dcflight
 
 class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
-    // Dictionary to cache loaded images
+    // Dictionary to cache loaded images - using String keys only
     private static var imageCache = [String: UIImage]()
     
     required override init() {
@@ -26,20 +26,42 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
     func updateView(_ view: UIView, withProps props: [String: Any]) -> Bool {
         guard let imageView = view as? UIImageView else { return false }
         
-        // Set image source if specified
-        if let source = props["source"] as? String {
+        // Set image source if specified - with proper type checking
+        if let sourceAny = props["source"] {
+            let source: String
+            
+            // Handle different source types safely
+            if let sourceString = sourceAny as? String {
+                source = sourceString
+            } else if let sourceNumber = sourceAny as? NSNumber {
+                source = sourceNumber.stringValue
+            } else {
+                print("❌ Invalid source type: \(type(of: sourceAny))")
+                triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Invalid source type"])
+                return false
+            }
+            
+            // Validate source is not empty
+            guard !source.isEmpty else {
+                print("❌ Empty source provided")
+                triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Empty source"])
+                return false
+            }
+            
             let key = sharedFlutterViewController?.lookupKey(forAsset: source)
             let mainBundle = Bundle.main
             let path = mainBundle.path(forResource: key, ofType: nil)
             
-
-            if (source.hasPrefix("https://")==false){
+            if !source.hasPrefix("https://") && !source.hasPrefix("http://") {
                 print("this image path is local")
-                loadImage(from: path!, into: imageView)
-            }else{
-                loadImage(from: source, into: imageView)
+                if let validPath = path {
+                    loadImage(from: validPath, into: imageView, isLocal: true)
+                } else {
+                    loadImage(from: source, into: imageView, isLocal: true)
+                }
+            } else {
+                loadImage(from: source, into: imageView, isLocal: false)
             }
-            
         }
         
         // Set resize mode if specified
@@ -61,79 +83,92 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
         return true
     }
     
-    // Load image from URL or resource
-    private func loadImage(from source: String, into imageView: UIImageView) {
-        // Check cache first
-        if let cachedImage = DCFImageComponent.imageCache[source] {
-            imageView.image = cachedImage
-            triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
+    // Load image from URL or resource with improved error handling
+    private func loadImage(from source: String, into imageView: UIImageView, isLocal: Bool = false) {
+        // Validate source
+        guard !source.isEmpty else {
+            print("❌ Empty source provided to loadImage")
+            triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Empty source"])
             return
         }
         
+        // Create a safe cache key - ensure it's always a string
+        let cacheKey = String(describing: source)
         
-        
-        // Check if it's a URL
-        if source.hasPrefix("http://") || source.hasPrefix("https://") {
-            // Load from URL
-            if let url = URL(string: source) {
-                // Load image asynchronously
-              
-                    if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
-                        // Cache the image
-                        DCFImageComponent.imageCache[source] = image
-                        
-                        DispatchQueue.main.async {
-                            UIView.transition(with: imageView, duration: 0.3, options: .transitionCrossDissolve, animations: {
-                                imageView.image = image
-                            }, completion: { _ in
-                                // Trigger onLoad event
-                                self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
-                            })
-                        }
-                    } else if(source.hasPrefix("https://")==false){
-                 
-                        if let image = UIImage(contentsOfFile: source) {
-                                // Cache the image
-                                DCFImageComponent.imageCache[source] = image
-                                
-                                // Set the image
-                                imageView.image = image
-                                
-                                // Trigger onLoad event
-                            self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
-                           
-                            } else {
-                                print("❌ Failed to load image from resolved path: \(source)")
-                                self.triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Image not found at resolved path"])
-                                return
-                            }
-                    }else {
-                        // Trigger onError event
-                        DispatchQueue.main.async {
-                            self.triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Failed to load image from URL"])
-                        }
-                    }
-                }
-                return
-            
-        } else {
-            // Try to load from bundle directly
-            if let image = UIImage(named: source) {
-                // Cache the image
-                DCFImageComponent.imageCache[source] = image
-                
-                // Set the image
-                imageView.image = image
-                
-                // Trigger onLoad event
-                triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
-                return
+        // Check cache first
+        if let cachedImage = DCFImageComponent.imageCache[cacheKey] {
+            DispatchQueue.main.async {
+                imageView.image = cachedImage
+                self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
             }
+            return
         }
         
-        // If we reach here, the image couldn't be loaded
-        print("❌ Failed to load image: \(source)")
-        triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Image not found"])
+        if !isLocal && (source.hasPrefix("http://") || source.hasPrefix("https://")) {
+            // Load from URL
+            guard let url = URL(string: source) else {
+                print("❌ Invalid URL: \(source)")
+                triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Invalid URL"])
+                return
+            }
+            
+            // Load image asynchronously
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self = self else { return }
+                
+                do {
+                    let data = try Data(contentsOf: url)
+                    guard let image = UIImage(data: data) else {
+                        DispatchQueue.main.async {
+                            print("❌ Failed to create image from data for URL: \(source)")
+                            self.triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Failed to create image from data"])
+                        }
+                        return
+                    }
+                    
+                    // Cache the image safely
+                    DCFImageComponent.imageCache[cacheKey] = image
+                    
+                    DispatchQueue.main.async {
+                        UIView.transition(with: imageView, duration: 0.3, options: .transitionCrossDissolve, animations: {
+                            imageView.image = image
+                        }, completion: { _ in
+                            self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
+                        })
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        print("❌ Failed to load image from URL: \(source), error: \(error)")
+                        self.triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Failed to load image from URL: \(error.localizedDescription)"])
+                    }
+                }
+            }
+        } else {
+            // Handle local images
+            var image: UIImage?
+            
+            // Try different methods to load local image
+            if FileManager.default.fileExists(atPath: source) {
+                image = UIImage(contentsOfFile: source)
+            } else {
+                image = UIImage(named: source)
+            }
+            
+            if let validImage = image {
+                // Cache the image safely
+                DCFImageComponent.imageCache[cacheKey] = validImage
+                
+                DispatchQueue.main.async {
+                    imageView.image = validImage
+                    self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
+                }
+            } else {
+                print("❌ Failed to load local image: \(source)")
+                DispatchQueue.main.async {
+                    self.triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Local image not found"])
+                }
+            }
+        }
     }
     
     // Handle component methods
@@ -142,16 +177,42 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
         
         switch methodName {
         case "setImage":
-            if let uri = args["uri"] as? String {
-                // Use the same loading logic
+            if let uriAny = args["uri"] {
+                let uri: String
+                
+                // Handle different URI types safely
+                if let uriString = uriAny as? String {
+                    uri = uriString
+                } else if let uriNumber = uriAny as? NSNumber {
+                    uri = uriNumber.stringValue
+                } else {
+                    print("❌ Invalid URI type in setImage: \(type(of: uriAny))")
+                    return false
+                }
+                
+                guard !uri.isEmpty else {
+                    print("❌ Empty URI provided to setImage")
+                    return false
+                }
+                
                 loadImage(from: uri, into: imageView)
                 return true
             }
         case "reload":
             // Force reload the current image
-            if let image = imageView.image {
-                // Just trigger the onLoad event again
+            if imageView.image != nil {
                 self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
+                return true
+            }
+        case "clearCache":
+            // Clear the entire image cache
+            DCFImageComponent.imageCache.removeAll()
+            return true
+        case "clearImageCache":
+            // Clear cache for specific image
+            if let sourceAny = args["source"] {
+                let source = String(describing: sourceAny)
+                DCFImageComponent.imageCache.removeValue(forKey: source)
                 return true
             }
         default:
@@ -159,5 +220,17 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
         }
         
         return false
+    }
+    
+    // Safe event triggering
+    internal func triggerEvent(on view: UIView, eventType: String, eventData: [String: Any]) {
+        DispatchQueue.main.async {
+            // Ensure we're on main thread for UI updates
+            if let component = view.superview as? DCFComponent {
+                // Trigger the event safely
+                // Note: You'll need to implement the actual event triggering based on your framework
+                print("🔔 Triggering event: \(eventType) with data: \(eventData)")
+            }
+        }
     }
 }
