@@ -38,25 +38,54 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
         if let showsScrollIndicator = props["showsScrollIndicator"] as? Bool {
             scrollView.showsVerticalScrollIndicator = showsScrollIndicator
             scrollView.showsHorizontalScrollIndicator = showsScrollIndicator
+            print("📜 ScrollView showsScrollIndicator set to: \(showsScrollIndicator)")
         }
         
         // Set scroll indicator color if specified
-        if let scrollIndicatorColor = props["scrollIndicatorColor"] as? String {
-            if #available(iOS 13.0, *) {
-                scrollView.verticalScrollIndicatorInsets = UIEdgeInsets.zero
-                scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets.zero
-                // Note: iOS doesn't directly support scroll indicator color customization
-                // This would require a custom implementation
+        if let scrollIndicatorColorValue = props["scrollIndicatorColor"] {
+            var indicatorColor: UIColor?
+            
+            // Handle different color value types
+            if let colorString = scrollIndicatorColorValue as? String {
+                indicatorColor = ColorUtilities.color(fromHexString: colorString)
+            } else if let colorNumber = scrollIndicatorColorValue as? NSNumber {
+                // Convert number to hex color
+                let colorInt = colorNumber.intValue
+                let red = CGFloat((colorInt >> 16) & 0xFF) / 255.0
+                let green = CGFloat((colorInt >> 8) & 0xFF) / 255.0
+                let blue = CGFloat(colorInt & 0xFF) / 255.0
+                indicatorColor = UIColor(red: red, green: green, blue: blue, alpha: 1.0)
+            }
+            
+            if let color = indicatorColor {
+                // iOS 13+ supports scroll indicator styling
+                if #available(iOS 13.0, *) {
+                    // Store the color for potential custom scroll indicator implementation
+                    objc_setAssociatedObject(scrollView, 
+                                           UnsafeRawPointer(bitPattern: "scrollIndicatorColor".hashValue)!, 
+                                           color, 
+                                           .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                    print("📜 ScrollView indicator color stored: \(color)")
+                    
+                    // Note: iOS doesn't natively support custom scroll indicator colors
+                    // but we can implement custom indicators if needed
+                } else {
+                    print("⚠️ Custom scroll indicator colors require iOS 13+")
+                }
             }
         }
         
         // Set scroll indicator size if specified  
-        if let scrollIndicatorSize = props["scrollIndicatorSize"] as? String {
-            // iOS scroll indicators have fixed size, but we can store this for custom implementations
+        if let scrollIndicatorSize = props["scrollIndicatorSize"] {
+            // Store the size for potential custom scroll indicator implementation
             objc_setAssociatedObject(scrollView, 
                                    UnsafeRawPointer(bitPattern: "scrollIndicatorSize".hashValue)!, 
                                    scrollIndicatorSize, 
                                    .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            print("📜 ScrollView indicator size stored: \(scrollIndicatorSize)")
+            
+            // Note: iOS scroll indicators have fixed size by default
+            // but we can implement custom indicators with custom sizes if needed
         }
         
         // Set bounces if specified
@@ -208,7 +237,7 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
     
     // Handle scroll view delegate methods
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        triggerEvent(on: scrollView, eventType: "onScrollBeginDrag", eventData: [
+        tryAllEventHandlingMethods(scrollView, eventType: "onScrollBeginDrag", eventData: [
             "contentOffset": [
                 "x": scrollView.contentOffset.x,
                 "y": scrollView.contentOffset.y
@@ -217,7 +246,7 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        triggerEvent(on: scrollView, eventType: "onScrollEndDrag", eventData: [
+        tryAllEventHandlingMethods(scrollView, eventType: "onScrollEndDrag", eventData: [
             "contentOffset": [
                 "x": scrollView.contentOffset.x,
                 "y": scrollView.contentOffset.y
@@ -226,7 +255,7 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
         ])
         
         if !decelerate {
-            triggerEvent(on: scrollView, eventType: "onScrollEnd", eventData: [
+            tryAllEventHandlingMethods(scrollView, eventType: "onScrollEnd", eventData: [
                 "contentOffset": [
                     "x": scrollView.contentOffset.x,
                     "y": scrollView.contentOffset.y
@@ -236,7 +265,7 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        triggerEvent(on: scrollView, eventType: "onScrollEnd", eventData: [
+        tryAllEventHandlingMethods(scrollView, eventType: "onScrollEnd", eventData: [
             "contentOffset": [
                 "x": scrollView.contentOffset.x,
                 "y": scrollView.contentOffset.y
@@ -246,7 +275,7 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
     
     // Handle scroll events for continuous updates
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        triggerEvent(on: scrollView, eventType: "onScroll", eventData: [
+        tryAllEventHandlingMethods(scrollView, eventType: "onScroll", eventData: [
             "contentOffset": [
                 "x": scrollView.contentOffset.x,
                 "y": scrollView.contentOffset.y
@@ -260,6 +289,68 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
                 "height": scrollView.bounds.height
             ]
         ])
+    }
+    
+    // Try all event handling methods in sequence (matching TouchableOpacity pattern)
+    private func tryAllEventHandlingMethods(_ view: UIView, eventType: String, eventData: [String: Any] = [:]) {
+        if tryDirectEventHandling(view, eventType: eventType, eventData: eventData) || 
+           tryStaticDictionaryHandling(view, eventType: eventType, eventData: eventData) ||
+           tryGenericEventHandling(view, eventType: eventType, eventData: eventData) {
+            print("✅ \(eventType) event handled successfully")
+        } else {
+            print("⚠️ \(eventType) event not handled - no handler registered for scroll view")
+        }
+    }
+    
+    // Try direct handling via associated objects with specific keys
+    private func tryDirectEventHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
+        if let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "scrollViewId".hashValue)!) as? String,
+           let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "scrollCallback".hashValue)!) as? (String, String, [String: Any]) -> Void {
+            
+            print("🎯 Direct handler found for scroll view: \(viewId)")
+            
+            // Merge with provided event data
+            var finalEventData = eventData
+            finalEventData["timestamp"] = Date().timeIntervalSince1970
+            finalEventData["direct"] = true
+            
+            // Invoke callback directly
+            callback(viewId, eventType, finalEventData)
+            return true
+        }
+        return false
+    }
+    
+    // Try handling via static dictionary
+    private func tryStaticDictionaryHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
+        if let (viewId, callback) = DCFScrollViewComponent.scrollEventHandlers[view as! UIScrollView] {
+            print("🔘 Scroll event via static dictionary: \(viewId)")
+            
+            var finalEventData = eventData
+            finalEventData["timestamp"] = Date().timeIntervalSince1970
+            finalEventData["static"] = true
+            
+            callback(viewId, eventType, finalEventData)
+            return true
+        }
+        return false
+    }
+    
+    // Try handling via generic associated objects (fallback)
+    private func tryGenericEventHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
+        if let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String,
+           let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void {
+            
+            print("🌐 Generic handler found for scroll view: \(viewId)")
+            
+            var finalEventData = eventData
+            finalEventData["timestamp"] = Date().timeIntervalSince1970
+            finalEventData["generic"] = true
+            
+            callback(viewId, eventType, finalEventData)
+            return true
+        }
+        return false
     }
     
     // Handle component methods
