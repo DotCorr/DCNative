@@ -1,4 +1,4 @@
-import 'package:dcf_go/app/store.dart';
+import 'package:dcf_go/app/dcfgo/store.dart';
 import 'package:dcf_primitives/dcf_primitives.dart';
 import 'package:dcflight/dcflight.dart';
 

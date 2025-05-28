@@ -1,8 +1,8 @@
-import 'package:dcf_go/app/components/bunch_cards.dart';
-import 'package:dcf_go/app/components/footer.dart';
-import 'package:dcf_go/app/pages/scan.dart';
-import 'package:dcf_go/app/store.dart';
-import 'package:dcf_go/app/components/top_bar.dart';
+import 'package:dcf_go/app/dcfgo/components/bunch_cards.dart';
+import 'package:dcf_go/app/dcfgo/components/footer.dart';
+import 'package:dcf_go/app/dcfgo/pages/scan.dart';
+import 'package:dcf_go/app/dcfgo/store.dart';
+import 'package:dcf_go/app/dcfgo/components/top_bar.dart';
 import 'package:dcf_primitives/dcf_primitives.dart';
 import 'package:dcflight/dcflight.dart';
 

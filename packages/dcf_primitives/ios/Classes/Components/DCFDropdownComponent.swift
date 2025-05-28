@@ -1,8 +1,7 @@
-import UIKit
+impclass DCFDropdownComponent: NSObject, DCFComponent {t UIKit
 import dcflight
 
 class DCFDropdownComponent: NSObject, DCFComponent {
-    private static var activeDropdowns: [UIView: DropdownViewController] = [:]
     
     required override init() {
         super.init()

@@ -1,8 +1,9 @@
+import 'package:dcf_go/app/example_app/app.dart';
 import 'package:dcflight/dcflight.dart';
-import 'app/app.dart';
+
 
 void main() {
-  DCFlight.start(app: DCFGo());
+  DCFlight.start(app: ExampleApp());
 }
 
 

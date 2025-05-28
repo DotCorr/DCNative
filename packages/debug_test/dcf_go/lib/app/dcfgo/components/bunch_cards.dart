@@ -1,5 +1,5 @@
-import 'package:dcf_go/app/components/user_card.dart';
-import 'package:dcf_go/app/store.dart';
+import 'package:dcf_go/app/dcfgo/components/user_card.dart';
+import 'package:dcf_go/app/dcfgo/store.dart';
 import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 
 List<DCFComponentNode> bunchCards() {
