@@ -22,7 +22,7 @@ class DCFGo extends StatefulComponent {
             DCFScrollView(
               showsScrollIndicator: true,
               scrollIndicatorColor: Colors.red,
-              scrollIndicatorSize: 12,
+              scrollIndicatorSize: 20,
               style: StyleSheet(
                 // backgroundColor:
                 //     counter.value % 2 == 0 ? Colors.amber : Colors.white,

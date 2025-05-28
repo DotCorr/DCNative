@@ -24,7 +24,7 @@ class DCFAnimatedView extends StatelessComponent {
   DCFAnimatedView({
     required this.children,
     required this.animation,
-    this.layout = const LayoutProps(),
+    this.layout = const LayoutProps(padding: 8),
     this.style = const StyleSheet(),
     this.onAnimationEnd,
     this.events,
