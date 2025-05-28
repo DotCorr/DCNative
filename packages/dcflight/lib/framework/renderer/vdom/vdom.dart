@@ -379,25 +379,25 @@ class VDom {
 
     try {
       // Handle Fragment nodes
-      if (node is Fragment) {
-        // Render children directly to parent
-        int childIndex = index ?? 0;
-        final childIds = <String>[];
+      // if (node is Fragment) {
+      //   // Render children directly to parent
+      //   int childIndex = index ?? 0;
+      //   final childIds = <String>[];
         
-        for (final child in node.children) {
-          final childId = await renderToNative(
-            child,
-            parentViewId: parentViewId,
-            index: childIndex++,
-          );
+      //   for (final child in node.children) {
+      //     final childId = await renderToNative(
+      //       child,
+      //       parentViewId: parentViewId,
+      //       index: childIndex++,
+      //     );
           
-          if (childId != null && childId.isNotEmpty) {
-            childIds.add(childId);
-          }
-        }
+      //     if (childId != null && childId.isNotEmpty) {
+      //       childIds.add(childId);
+      //     }
+      //   }
         
-        return null; // Fragments don't have their own ID
-      }
+      //   return null; // Fragments don't have their own ID
+      // }
 
       // Handle Component nodes
       if (node is StatefulComponent || node is StatelessComponent) {
@@ -574,19 +574,19 @@ class VDom {
       await _reconcile(oldRenderedNode, newRenderedNode);
         }
     // Handle Fragment nodes
-    else if (oldNode is Fragment && newNode is Fragment) {
-      // Transfer children relationships
-      newNode.parent = oldNode.parent;
+    // else if (oldNode is Fragment && newNode is Fragment) {
+    //   // Transfer children relationships
+    //   newNode.parent = oldNode.parent;
       
-      // Reconcile fragment children directly since fragments don't have native view IDs
-      if (oldNode.children.isNotEmpty || newNode.children.isNotEmpty) {
-        // Find the parent view ID to reconcile children against
-        final parentViewId = _findParentViewId(oldNode);
-        if (parentViewId != null) {
-          await _reconcileFragmentChildren(parentViewId, oldNode.children, newNode.children);
-        }
-      }
-    }
+    //   // Reconcile fragment children directly since fragments don't have native view IDs
+    //   if (oldNode.children.isNotEmpty || newNode.children.isNotEmpty) {
+    //     // Find the parent view ID to reconcile children against
+    //     final parentViewId = _findParentViewId(oldNode);
+    //     if (parentViewId != null) {
+    //       await _reconcileFragmentChildren(parentViewId, oldNode.children, newNode.children);
+    //     }
+    //   }
+    // }
     // Handle empty nodes
     else if (oldNode is EmptyVDomNode && newNode is EmptyVDomNode) {
       // Nothing to do for empty nodes

@@ -9,45 +9,57 @@ class Footer extends StatefulComponent {
     final tabIndex = useStore(tabIndexCount);
 
     return DCFView(
-      style: StyleSheet(
-        backgroundColor:
-            globalCounter.state % 2 == 0 ? Colors.amber : Colors.teal,
-      ),
-      layout: LayoutProps(
-        height: 100,
-        marginVertical: 20,
-        flexDirection: YogaFlexDirection.row,
-      ),
+      layout: LayoutProps(),
       children: [
-        _Container(
-          tabIndex == 0,
+        DCFView(
+          layout: LayoutProps(height: 0.5, width: '100%'),
+          style: StyleSheet(backgroundColor: Colors.grey[200]),
+        ),
+        DCFView(
+          style: StyleSheet(backgroundColor: Colors.white),
+          layout: LayoutProps(
+            height: 100,
+            width: "100%",
+            marginVertical: 20,
+            flexDirection: YogaFlexDirection.row,
+          ),
           children: [
-            DCFIcon(iconProps: IconProps(name: DCFIcons.house)),
-            DCFView(
-              style: StyleSheet(backgroundColor: Colors.red, borderRadius: 360),
-              layout: LayoutProps(
-                height: 15,
-                width: 15,
-                display: YogaDisplay.flex,
-                position: YogaPositionType.absolute,
-              ),
+            _Container(
+              tabIndex == 0,
               children: [
-                DCFText(
-                  content: globalCounter.state.toString(),
-                  textProps: TextProps(fontSize: 8),
+                DCFIcon(iconProps: IconProps(name: DCFIcons.house)),
+                DCFView(
+                  style: StyleSheet(
+                    backgroundColor: Colors.red,
+                    borderRadius: 360,
+                  ),
+                  layout: LayoutProps(
+                    height: 15,
+                    width: 15,
+                    display: YogaDisplay.flex,
+                    position: YogaPositionType.absolute,
+                  ),
+                  children: [
+                    DCFText(
+                      content: globalCounter.state.toString(),
+                      textProps: TextProps(fontSize: 8,color: Colors.white),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-        _Container(
-          tabIndex == 1,
-          children: [DCFIcon(iconProps: IconProps(name: DCFIcons.scan))],
-        ),
+            _Container(
+              tabIndex == 1,
+              children: [DCFIcon(iconProps: IconProps(name: DCFIcons.scan))],
+            ),
 
-        _Container(
-          tabIndex == 3,
-          children: [DCFIcon(iconProps: IconProps(name: DCFIcons.settings))],
+            _Container(
+              tabIndex == 3,
+              children: [
+                DCFIcon(iconProps: IconProps(name: DCFIcons.settings)),
+              ],
+            ),
+          ],
         ),
       ],
     );

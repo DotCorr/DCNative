@@ -10,7 +10,8 @@ class DCFGo extends StatefulComponent {
   DCFComponentNode render() {
     final globalCounter = useStore(globalCounterState);
     final counter = useState(0);
-    return Fragment(
+    return DCFView(
+      layout: LayoutProps(flex: 1),
       children: [
         TopBar(globalCounter: globalCounter, counter: counter),
         DCFView(
