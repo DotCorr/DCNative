@@ -2,14 +2,8 @@ import UIKit
 import dcflight
 
 class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UIScrollViewDelegate {
-    // Keep singleton instance to prevent deallocation when scroll events are registered
-    private static let sharedInstance = DCFScrollViewComponent()
-    
-    // Static storage for scroll event handlers
-    private static var scrollEventHandlers = [UIScrollView: (String, (String, String, [String: Any]) -> Void)]()
-    
-    // Store strong reference to self when views are registered
-    private static var registeredScrollViews = [UIScrollView: DCFScrollViewComponent]()
+    // Singleton delegate that handles all scroll view events
+    private static let sharedDelegate = ScrollViewEventDelegate()
     
     required override init() {
         super.init()
@@ -18,7 +12,9 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
     func createView(props: [String: Any]) -> UIView {
         // Create a custom scroll view
         let scrollView = DCFAutoContentScrollView()
-        scrollView.delegate = self
+        
+        // Set the shared delegate (but don't trigger events yet)
+        scrollView.delegate = DCFScrollViewComponent.sharedDelegate
         
         // Apply initial styling
         scrollView.showsVerticalScrollIndicator = true
@@ -237,123 +233,51 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
     
     // Handle scroll view delegate methods
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        tryAllEventHandlingMethods(scrollView, eventType: "onScrollBeginDrag", eventData: [
-            "contentOffset": [
-                "x": scrollView.contentOffset.x,
-                "y": scrollView.contentOffset.y
-            ]
-        ])
+        // This method is not used anymore - the sharedDelegate handles all events
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        tryAllEventHandlingMethods(scrollView, eventType: "onScrollEndDrag", eventData: [
-            "contentOffset": [
-                "x": scrollView.contentOffset.x,
-                "y": scrollView.contentOffset.y
-            ],
-            "willDecelerate": decelerate
-        ])
-        
-        if !decelerate {
-            tryAllEventHandlingMethods(scrollView, eventType: "onScrollEnd", eventData: [
-                "contentOffset": [
-                    "x": scrollView.contentOffset.x,
-                    "y": scrollView.contentOffset.y
-                ]
-            ])
-        }
+        // This method is not used anymore - the sharedDelegate handles all events  
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        tryAllEventHandlingMethods(scrollView, eventType: "onScrollEnd", eventData: [
-            "contentOffset": [
-                "x": scrollView.contentOffset.x,
-                "y": scrollView.contentOffset.y
-            ]
-        ])
+        // This method is not used anymore - the sharedDelegate handles all events
     }
     
     // Handle scroll events for continuous updates
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        tryAllEventHandlingMethods(scrollView, eventType: "onScroll", eventData: [
-            "contentOffset": [
-                "x": scrollView.contentOffset.x,
-                "y": scrollView.contentOffset.y
-            ],
-            "contentSize": [
-                "width": scrollView.contentSize.width,
-                "height": scrollView.contentSize.height
-            ],
-            "layoutMeasurement": [
-                "width": scrollView.bounds.width,
-                "height": scrollView.bounds.height
-            ]
-        ])
+        // This method is not used anymore - the sharedDelegate handles all events
     }
     
-    // Try all event handling methods in sequence (matching TouchableOpacity pattern)
-    private func tryAllEventHandlingMethods(_ view: UIView, eventType: String, eventData: [String: Any] = [:]) {
-        if tryDirectEventHandling(view, eventType: eventType, eventData: eventData) || 
-           tryStaticDictionaryHandling(view, eventType: eventType, eventData: eventData) ||
-           tryGenericEventHandling(view, eventType: eventType, eventData: eventData) {
-            print("✅ \(eventType) event handled successfully")
-        } else {
-            print("⚠️ \(eventType) event not handled - no handler registered for scroll view")
+    // MARK: - Event Handling
+    
+    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
+                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
+        guard let scrollView = view as? UIScrollView else { 
+            print("❌ Cannot add event listeners to non-scroll view")
+            return 
         }
+ 
+        // Ensure the delegate is set (should already be set from createView)
+        scrollView.delegate = DCFScrollViewComponent.sharedDelegate
+        
+        // Register this scroll view with the shared delegate
+        DCFScrollViewComponent.sharedDelegate.registerScrollView(scrollView, viewId: viewId, eventTypes: eventTypes, callback: eventCallback)
+        
+        print("✅ Successfully added scroll event handlers to view \(viewId) for events: \(eventTypes)")
     }
     
-    // Try direct handling via associated objects with specific keys
-    private func tryDirectEventHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
-        if let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "scrollViewId".hashValue)!) as? String,
-           let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "scrollCallback".hashValue)!) as? (String, String, [String: Any]) -> Void {
-            
-            print("🎯 Direct handler found for scroll view: \(viewId)")
-            
-            // Merge with provided event data
-            var finalEventData = eventData
-            finalEventData["timestamp"] = Date().timeIntervalSince1970
-            finalEventData["direct"] = true
-            
-            // Invoke callback directly
-            callback(viewId, eventType, finalEventData)
-            return true
-        }
-        return false
+    func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
+        guard let scrollView = view as? UIScrollView else { return }
+        
+        // Unregister this scroll view from the shared delegate
+        DCFScrollViewComponent.sharedDelegate.unregisterScrollView(scrollView, viewId: viewId)
+        
+        print("✅ Removed event listeners from scroll view: \(viewId)")
     }
     
-    // Try handling via static dictionary
-    private func tryStaticDictionaryHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
-        if let (viewId, callback) = DCFScrollViewComponent.scrollEventHandlers[view as! UIScrollView] {
-            print("🔘 Scroll event via static dictionary: \(viewId)")
-            
-            var finalEventData = eventData
-            finalEventData["timestamp"] = Date().timeIntervalSince1970
-            finalEventData["static"] = true
-            
-            callback(viewId, eventType, finalEventData)
-            return true
-        }
-        return false
-    }
+    // MARK: - Component Methods
     
-    // Try handling via generic associated objects (fallback)
-    private func tryGenericEventHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
-        if let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String,
-           let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void {
-            
-            print("🌐 Generic handler found for scroll view: \(viewId)")
-            
-            var finalEventData = eventData
-            finalEventData["timestamp"] = Date().timeIntervalSince1970
-            finalEventData["generic"] = true
-            
-            callback(viewId, eventType, finalEventData)
-            return true
-        }
-        return false
-    }
-    
-    // Handle component methods
     func handleMethod(methodName: String, args: [String: Any], view: UIView) -> Bool {
         guard let scrollView = view as? UIScrollView else { return false }
         
@@ -382,98 +306,6 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
         }
         
         return false
-    }
-    
-    // MARK: - Event Handling
-    
-    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
-                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
-        guard let scrollView = view as? UIScrollView else { 
-            print("❌ Cannot add event listeners to non-scroll view")
-            return 
-        }
- 
-        // Ensure the delegate is set to sharedInstance for event handling
-        scrollView.delegate = DCFScrollViewComponent.sharedInstance
-        
-        // Store event data with associated objects
-        storeEventData(on: scrollView, viewId: viewId, eventTypes: eventTypes, callback: eventCallback)
-        
-        // Store strong reference to component instance to prevent deallocation
-        DCFScrollViewComponent.registeredScrollViews[scrollView] = DCFScrollViewComponent.sharedInstance
-        
-        print("✅ Successfully added event handlers to scroll view \(viewId)")
-    }
-    
-    // Store event data using multiple methods for redundancy
-    private func storeEventData(on scrollView: UIScrollView, viewId: String, eventTypes: [String], 
-                               callback: @escaping (String, String, [String: Any]) -> Void) {
-        // Store the event information as associated objects - generic keys
-        objc_setAssociatedObject(
-            scrollView,
-            UnsafeRawPointer(bitPattern: "viewId".hashValue)!,
-            viewId,
-            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-        )
-        
-        objc_setAssociatedObject(
-            scrollView,
-            UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
-            eventTypes,
-            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-        )
-        
-        objc_setAssociatedObject(
-            scrollView,
-            UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!,
-            callback,
-            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-        )
-        
-        // Additional redundant storage - scroll specific keys
-        objc_setAssociatedObject(
-            scrollView,
-            UnsafeRawPointer(bitPattern: "scrollViewId".hashValue)!,
-            viewId,
-            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-        )
-        
-        objc_setAssociatedObject(
-            scrollView,
-            UnsafeRawPointer(bitPattern: "scrollCallback".hashValue)!,
-            callback,
-            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-        )
-        
-        // Store in static dictionary as additional backup
-        DCFScrollViewComponent.scrollEventHandlers[scrollView] = (viewId, callback)
-    }
-    
-    func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
-        guard let scrollView = view as? UIScrollView else { return }
-        
-        // Clean up all references
-        cleanupEventReferences(from: scrollView, viewId: viewId)
-        
-        print("✅ Removed event listeners from scroll view: \(viewId)")
-    }
-    
-    // Helper to clean up all event references
-    private func cleanupEventReferences(from scrollView: UIScrollView, viewId: String) {
-        // Remove from static handlers dictionary
-        DCFScrollViewComponent.scrollEventHandlers.removeValue(forKey: scrollView)
-        DCFScrollViewComponent.registeredScrollViews.removeValue(forKey: scrollView)
-        
-        // Clear all associated objects
-        let keys = ["viewId", "eventTypes", "eventCallback", "scrollViewId", "scrollCallback"]
-        for key in keys {
-            objc_setAssociatedObject(
-                scrollView,
-                UnsafeRawPointer(bitPattern: key.hashValue)!,
-                nil,
-                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
-            )
-        }
     }
 }
 
@@ -616,5 +448,96 @@ class DCFAutoContentScrollView: UIScrollView {
                 }
             }
         }
+    }
+}
+
+// MARK: - Dedicated Scroll View Event Delegate
+
+/// Singleton delegate class that handles all scroll view events
+/// This prevents deallocation issues and provides clean event routing
+class ScrollViewEventDelegate: NSObject, UIScrollViewDelegate {
+    // Store event callbacks for each scroll view
+    private var eventCallbacks = [UIScrollView: (String, [String], (String, String, [String: Any]) -> Void)]()
+    
+    /// Register a scroll view for event handling
+    func registerScrollView(_ scrollView: UIScrollView, viewId: String, eventTypes: [String], 
+                           callback: @escaping (String, String, [String: Any]) -> Void) {
+        eventCallbacks[scrollView] = (viewId, eventTypes, callback)
+        print("📋 Registered scroll view \(viewId) with events: \(eventTypes)")
+    }
+    
+    /// Unregister a scroll view from event handling
+    func unregisterScrollView(_ scrollView: UIScrollView, viewId: String) {
+        eventCallbacks.removeValue(forKey: scrollView)
+        print("📋 Unregistered scroll view \(viewId)")
+    }
+    
+    /// Trigger an event for a scroll view if it's registered for that event type
+    private func triggerEventIfRegistered(_ scrollView: UIScrollView, eventType: String, eventData: [String: Any]) {
+        guard let (viewId, eventTypes, callback) = eventCallbacks[scrollView] else {
+            // No event handler registered for this scroll view - this is normal during setup
+            return
+        }
+        
+        // Check if this specific event type is registered
+        if eventTypes.contains(eventType) {
+            callback(viewId, eventType, eventData)
+        }
+    }
+    
+    // MARK: - UIScrollViewDelegate Methods
+    
+    func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
+        triggerEventIfRegistered(scrollView, eventType: "onScrollBeginDrag", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ]
+        ])
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        triggerEventIfRegistered(scrollView, eventType: "onScrollEndDrag", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ],
+            "willDecelerate": decelerate
+        ])
+        
+        if !decelerate {
+            triggerEventIfRegistered(scrollView, eventType: "onScrollEnd", eventData: [
+                "contentOffset": [
+                    "x": scrollView.contentOffset.x,
+                    "y": scrollView.contentOffset.y
+                ]
+            ])
+        }
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        triggerEventIfRegistered(scrollView, eventType: "onScrollEnd", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ]
+        ])
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        triggerEventIfRegistered(scrollView, eventType: "onScroll", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ],
+            "contentSize": [
+                "width": scrollView.contentSize.width,
+                "height": scrollView.contentSize.height
+            ],
+            "layoutMeasurement": [
+                "width": scrollView.bounds.width,
+                "height": scrollView.bounds.height
+            ]
+        ])
     }
 }
