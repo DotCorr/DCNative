@@ -9,7 +9,6 @@ import 'package:dcflight/framework/renderer/vdom/component/error_boundary.dart';
 export 'package:dcflight/framework/renderer/vdom/component/store.dart';
 import 'package:dcflight/framework/renderer/vdom/component/dcf_element.dart';
 import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
-import 'package:dcflight/framework/renderer/vdom/experimental_stash/fragment.dart';
 
 /// Virtual DOM implementation with efficient reconciliation and state handling
 class VDom {
@@ -769,17 +768,17 @@ class VDom {
   }
 
   /// Reconcile fragment children directly without a container element
-  Future<void> _reconcileFragmentChildren(String parentViewId, 
-      List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
-    // Use the same reconciliation logic as elements but for fragment children
-    final hasKeys = _childrenHaveKeys(newChildren);
+  // Future<void> _reconcileFragmentChildren(String parentViewId, 
+  //     List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
+  //   // Use the same reconciliation logic as elements but for fragment children
+  //   final hasKeys = _childrenHaveKeys(newChildren);
     
-    if (hasKeys) {
-      await _reconcileKeyedChildren(parentViewId, oldChildren, newChildren);
-    } else {
-      await _reconcileSimpleChildren(parentViewId, oldChildren, newChildren);
-    }
-  }
+  //   if (hasKeys) {
+  //     await _reconcileKeyedChildren(parentViewId, oldChildren, newChildren);
+  //   } else {
+  //     await _reconcileSimpleChildren(parentViewId, oldChildren, newChildren);
+  //   }
+  // }
 
   /// Reconcile children with keys for optimal reordering
   Future<void> _reconcileKeyedChildren(String parentViewId, 

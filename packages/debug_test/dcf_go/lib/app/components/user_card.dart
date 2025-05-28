@@ -15,18 +15,16 @@ class UserCard extends StatelessComponent {
       activeOpacity: 0.5,
       onPress:onPress,
       layout: LayoutProps(
-        margin: 2,
+        marginBottom: 8,
         height: 120,
         width: "100%",
-        alignContent: YogaAlign.stretch,
         flexWrap: YogaWrap.nowrap,
         justifyContent: YogaJustifyContent.spaceAround,
       ),
       children: [
         DCFView(
           layout: LayoutProps(
-            height: 150,
-            width: "100%",
+           flex: 1,
             alignContent: YogaAlign.stretch,
             flexWrap: YogaWrap.nowrap,
             flexDirection: YogaFlexDirection.row,
@@ -40,7 +38,7 @@ class UserCard extends StatelessComponent {
                 resizeMode: "cover",
                 source: "https://avatars.githubusercontent.com/u/130235676?v=4",
               ),
-              layout: LayoutProps(height: 60, width: 60, borderWidth: 1),
+              layout: LayoutProps(height: 60, width: 60, borderWidth: 10),
               style: StyleSheet(borderRadius: 30, borderColor: Colors.black),
             ),
             DCFView(

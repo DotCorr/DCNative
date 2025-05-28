@@ -22,14 +22,13 @@ class DCFGo extends StatefulComponent {
             DCFScrollView(
               showsScrollIndicator: true,
               style: StyleSheet(
-                backgroundColor:
-                    counter.value % 2 == 0 ? Colors.amber : Colors.white,
+                // backgroundColor:
+                //     counter.value % 2 == 0 ? Colors.amber : Colors.white,
               ),
               layout: LayoutProps(
-                padding: 8,
-                paddingHorizontal: 20,
                 justifyContent: YogaJustifyContent.spaceAround,
-                gap: 10,
+                padding: 8,
+                // gap: 10,
                 flex: 1,
                 width: "100%",
                 flexDirection: YogaFlexDirection.column,
@@ -42,8 +41,10 @@ class DCFGo extends StatefulComponent {
                 DCFScrollView(
                   horizontal: true,
                   children: bunchCards(),
+                  
                   layout: LayoutProps(
                     flex: 2,
+                    gap: 4,
                     flexDirection: YogaFlexDirection.row,
                   ),
                 ),

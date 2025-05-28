@@ -2,8 +2,34 @@ import UIKit
 import dcflight
 
 class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
-    // Dictionary to cache loaded images - using String keys only
-    private static var imageCache = [String: UIImage]()
+    // Thread-safe image cache using concurrent queue with barrier writes
+    private static let cacheQueue = DispatchQueue(label: "com.dcf.imageCache", attributes: .concurrent)
+    private static var _imageCache = [String: UIImage]()
+    
+    // Thread-safe cache accessors
+    private static func getCachedImage(for key: String) -> UIImage? {
+        return cacheQueue.sync {
+            return _imageCache[key]
+        }
+    }
+    
+    private static func setCachedImage(_ image: UIImage, for key: String) {
+        cacheQueue.async(flags: .barrier) {
+            _imageCache[key] = image
+        }
+    }
+    
+    private static func removeCachedImage(for key: String) {
+        cacheQueue.async(flags: .barrier) {
+            _imageCache.removeValue(forKey: key)
+        }
+    }
+    
+    private static func clearAllCache() {
+        cacheQueue.async(flags: .barrier) {
+            _imageCache.removeAll()
+        }
+    }
     
     required override init() {
         super.init()
@@ -83,7 +109,7 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
         return true
     }
     
-    // Load image from URL or resource with improved error handling
+    // Load image from URL or resource with improved error handling and thread safety
     private func loadImage(from source: String, into imageView: UIImageView, isLocal: Bool = false) {
         // Validate source
         guard !source.isEmpty else {
@@ -95,8 +121,8 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
         // Create a safe cache key - ensure it's always a string
         let cacheKey = String(describing: source)
         
-        // Check cache first
-        if let cachedImage = DCFImageComponent.imageCache[cacheKey] {
+        // Check cache first - thread-safe
+        if let cachedImage = DCFImageComponent.getCachedImage(for: cacheKey) {
             DispatchQueue.main.async {
                 imageView.image = cachedImage
                 self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
@@ -126,10 +152,13 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
                         return
                     }
                     
-                    // Cache the image safely
-                    DCFImageComponent.imageCache[cacheKey] = image
+                    // Cache the image safely - thread-safe
+                    DCFImageComponent.setCachedImage(image, for: cacheKey)
                     
                     DispatchQueue.main.async {
+                        // Double-check that imageView still exists and hasn't been deallocated
+                        guard imageView.superview != nil else { return }
+                        
                         UIView.transition(with: imageView, duration: 0.3, options: .transitionCrossDissolve, animations: {
                             imageView.image = image
                         }, completion: { _ in
@@ -145,27 +174,34 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
             }
         } else {
             // Handle local images
-            var image: UIImage?
-            
-            // Try different methods to load local image
-            if FileManager.default.fileExists(atPath: source) {
-                image = UIImage(contentsOfFile: source)
-            } else {
-                image = UIImage(named: source)
-            }
-            
-            if let validImage = image {
-                // Cache the image safely
-                DCFImageComponent.imageCache[cacheKey] = validImage
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                guard let self = self else { return }
                 
-                DispatchQueue.main.async {
-                    imageView.image = validImage
-                    self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
+                var image: UIImage?
+                
+                // Try different methods to load local image
+                if FileManager.default.fileExists(atPath: source) {
+                    image = UIImage(contentsOfFile: source)
+                } else {
+                    image = UIImage(named: source)
                 }
-            } else {
-                print("❌ Failed to load local image: \(source)")
-                DispatchQueue.main.async {
-                    self.triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Local image not found"])
+                
+                if let validImage = image {
+                    // Cache the image safely - thread-safe
+                    DCFImageComponent.setCachedImage(validImage, for: cacheKey)
+                    
+                    DispatchQueue.main.async {
+                        // Double-check that imageView still exists
+                        guard imageView.superview != nil else { return }
+                        
+                        imageView.image = validImage
+                        self.triggerEvent(on: imageView, eventType: "onLoad", eventData: [:])
+                    }
+                } else {
+                    print("❌ Failed to load local image: \(source)")
+                    DispatchQueue.main.async {
+                        self.triggerEvent(on: imageView, eventType: "onError", eventData: ["error": "Local image not found"])
+                    }
                 }
             }
         }
@@ -205,14 +241,14 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
                 return true
             }
         case "clearCache":
-            // Clear the entire image cache
-            DCFImageComponent.imageCache.removeAll()
+            // Clear the entire image cache - thread-safe
+            DCFImageComponent.clearAllCache()
             return true
         case "clearImageCache":
-            // Clear cache for specific image
+            // Clear cache for specific image - thread-safe
             if let sourceAny = args["source"] {
                 let source = String(describing: sourceAny)
-                DCFImageComponent.imageCache.removeValue(forKey: source)
+                DCFImageComponent.removeCachedImage(for: source)
                 return true
             }
         default:
@@ -227,8 +263,7 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
         DispatchQueue.main.async {
             // Ensure we're on main thread for UI updates
             if let component = view.superview as? DCFComponent {
-                // Trigger the event safely
-                // Note: You'll need to implement the actual event triggering based on your framework
+                self.triggerEvent(on: view, eventType: eventType, eventData: eventData)
                 print("🔔 Triggering event: \(eventType) with data: \(eventData)")
             }
         }
