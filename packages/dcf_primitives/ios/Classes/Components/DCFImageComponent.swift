@@ -77,7 +77,7 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
             // Load from URL
             if let url = URL(string: source) {
                 // Load image asynchronously
-                DispatchQueue.global().async {
+              
                     if let data = try? Data(contentsOf: url), let image = UIImage(data: data) {
                         // Cache the image
                         DCFImageComponent.imageCache[source] = image
@@ -92,7 +92,7 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
                         }
                     } else if(source.hasPrefix("https://")==false){
                  
-                        if let image = UIImage(contentsOfFile: source ?? "wrong path") {
+                        if let image = UIImage(contentsOfFile: source) {
                                 // Cache the image
                                 DCFImageComponent.imageCache[source] = image
                                 
@@ -115,7 +115,7 @@ class DCFImageComponent: NSObject, DCFComponent, ComponentMethodHandler {
                     }
                 }
                 return
-            }
+            
         } else {
             // Try to load from bundle directly
             if let image = UIImage(named: source) {

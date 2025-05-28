@@ -6,55 +6,63 @@ class Footer extends StatefulComponent {
   @override
   DCFComponentNode render() {
     final globalCounter = useStore(globalCounterState);
-    final tabIndex = useStore(tabIndexCount);
 
     return DCFView(
-      layout: LayoutProps(),
+      layout: LayoutProps(height: 100, width: "100%"),
       children: [
         DCFView(
-          layout: LayoutProps(height: 0.5, width: '100%'),
+          layout: LayoutProps(height: 1, width: '100%'),
           style: StyleSheet(backgroundColor: Colors.grey[200]),
         ),
         DCFView(
-          style: StyleSheet(backgroundColor: Colors.white),
           layout: LayoutProps(
-            height: 100,
+            height: "100%",
             width: "100%",
-            marginVertical: 20,
+            justifyContent: YogaJustifyContent.spaceAround,
+            alignItems: YogaAlign.center,
             flexDirection: YogaFlexDirection.row,
           ),
           children: [
             _Container(
-              tabIndex == 0,
+             0,
               children: [
                 DCFIcon(iconProps: IconProps(name: DCFIcons.house)),
                 DCFView(
                   style: StyleSheet(
                     backgroundColor: Colors.red,
-                    borderRadius: 360,
+                    borderRadius: 10,
                   ),
                   layout: LayoutProps(
-                    height: 15,
-                    width: 15,
-                    display: YogaDisplay.flex,
+                    height: 22,
+                    alignItems: YogaAlign.center,
+                    justifyContent: YogaJustifyContent.center,
+                    width: 22,
+                    right: 5,
+                    bottom: 5,
                     position: YogaPositionType.absolute,
                   ),
                   children: [
                     DCFText(
                       content: globalCounter.state.toString(),
-                      textProps: TextProps(fontSize: 8,color: Colors.white),
+                      layout: LayoutProps(width: 20),
+                      textProps: TextProps(
+                        numberOfLines: 1,
+                        fontSize: 14,
+                        color: Colors.white,
+                        fontWeight: "bold",
+                      ),
                     ),
                   ],
                 ),
               ],
             ),
             _Container(
-              tabIndex == 1,
+              1,
               children: [DCFIcon(iconProps: IconProps(name: DCFIcons.scan))],
             ),
 
             _Container(
-              tabIndex == 3,
+             2,
               children: [
                 DCFIcon(iconProps: IconProps(name: DCFIcons.settings)),
               ],
@@ -68,22 +76,37 @@ class Footer extends StatefulComponent {
 
 class _Container extends StatelessComponent {
   final List<DCFComponentNode> children;
-  final bool isSelected;
+  final int index;
 
-  _Container(this.isSelected, {required this.children});
+  _Container(this.index, {required this.children});
   @override
   DCFComponentNode render() {
-    return DCFView(
-      layout: LayoutProps(
-        height: 30,
-        width: 30,
-        alignContent: YogaAlign.center,
-        justifyContent: YogaJustifyContent.center,
-        display: YogaDisplay.flex,
-        position: YogaPositionType.relative,
-      ),
-      style: StyleSheet(backgroundColor: Colors.grey[100]),
-      children: children,
+    return DCFTouchableOpacity(
+      onPress: (V) {
+        print("pressed with values : $V");
+        tabIndexCount.setState(index);
+      },
+      activeOpacity: 0.5,
+      layout: LayoutProps(height: 50, width: 50),
+      children: [
+        DCFView(
+          layout: LayoutProps(
+            flex: 1,
+            alignItems: YogaAlign.center,
+            justifyContent: YogaJustifyContent.center,
+            display: YogaDisplay.flex,
+            position: YogaPositionType.relative,
+          ),
+          style: StyleSheet(
+            backgroundColor:
+                index == tabIndexCount.state
+                    ? Colors.blueAccent
+                    : Colors.grey[100],
+            borderRadius: 15,
+          ),
+          children: children,
+        ),
+      ],
     );
   }
 }

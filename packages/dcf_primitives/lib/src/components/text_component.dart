@@ -70,6 +70,7 @@ class DCFText extends StatelessComponent {
     required this.content,
     this.textProps = const TextProps(),
        this.layout = const LayoutProps(
+        
       flex: 1
     ),
     this.style = const StyleSheet(),
