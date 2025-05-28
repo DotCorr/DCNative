@@ -4,9 +4,14 @@ import 'package:dcflight/dcflight.dart';
 class ExampleApp extends StatefulComponent {
   @override
   DCFComponentNode render() {
-  final infoModal = useState(false);
+    final infoModal = useState(false);
     return DCFScrollView(
-      layout: LayoutProps(flex: 1),
+      layout: LayoutProps(
+        flex: 1,
+        alignItems: YogaAlign.center,
+        justifyContent: YogaJustifyContent.flexStart,
+      ),
+      style: StyleSheet(backgroundColor: Colors.amber),
       children: [
         DCFText(
           content: "Hello, DCF Go!",
@@ -21,13 +26,17 @@ class ExampleApp extends StatefulComponent {
           layout: LayoutProps(height: 50, width: 200),
           onPress: (context) {
             // Handle button press
-infoModal.setValue(true);
+            infoModal.setValue(true);
             print("Button pressed!");
           },
           buttonProps: ButtonProps(title: "Show more info Modal"),
         ),
         DCFModal(
           visible: infoModal.value,
+          statusBarTranslucent: true,
+          onDismiss: () {
+            infoModal.setValue(false);
+          },
           children: [
             DCFView(
               layout: LayoutProps(
@@ -53,7 +62,7 @@ infoModal.setValue(true);
                 ),
               ],
             ),
-          ]
+          ],
         ),
       ],
     );
