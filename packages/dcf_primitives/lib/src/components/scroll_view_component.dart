@@ -26,6 +26,21 @@ class DCFScrollView extends StatelessComponent {
   /// Scroll event handler
   final Function? onScroll;
   
+  /// Scroll begin drag event handler
+  final Function? onScrollBeginDrag;
+  
+  /// Scroll end drag event handler
+  final Function? onScrollEndDrag;
+  
+  /// Scroll end event handler
+  final Function? onScrollEnd;
+  
+  /// Scroll indicator color
+  final Color? scrollIndicatorColor;
+  
+  /// Scroll indicator size/thickness
+  final double? scrollIndicatorSize;
+  
   /// Create a scroll view component
   DCFScrollView({
     required this.children,
@@ -35,6 +50,11 @@ class DCFScrollView extends StatelessComponent {
     this.showsScrollIndicator = true,
     this.contentContainerStyle = const StyleSheet(),
     this.onScroll,
+    this.onScrollBeginDrag,
+    this.onScrollEndDrag,
+    this.onScrollEnd,
+    this.scrollIndicatorColor,
+    this.scrollIndicatorSize,
     this.events,
     super.key,
   });
@@ -48,11 +68,25 @@ class DCFScrollView extends StatelessComponent {
       eventMap['onScroll'] = onScroll;
     }
     
+    if (onScrollBeginDrag != null) {
+      eventMap['onScrollBeginDrag'] = onScrollBeginDrag;
+    }
+    
+    if (onScrollEndDrag != null) {
+      eventMap['onScrollEndDrag'] = onScrollEndDrag;
+    }
+    
+    if (onScrollEnd != null) {
+      eventMap['onScrollEnd'] = onScrollEnd;
+    }
+    
     return DCFElement(
       type: 'ScrollView',
       props: {
         'horizontal': horizontal,
         'showsScrollIndicator': showsScrollIndicator,
+        'scrollIndicatorColor': scrollIndicatorColor?.value,
+        'scrollIndicatorSize': scrollIndicatorSize,
         'contentContainerStyle': contentContainerStyle.toMap(),
         ...layout.toMap(),
         ...style.toMap(),

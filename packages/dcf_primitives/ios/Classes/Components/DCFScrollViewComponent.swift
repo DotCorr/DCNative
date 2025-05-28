@@ -2,6 +2,15 @@ import UIKit
 import dcflight
 
 class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UIScrollViewDelegate {
+    // Keep singleton instance to prevent deallocation when scroll events are registered
+    private static let sharedInstance = DCFScrollViewComponent()
+    
+    // Static storage for scroll event handlers
+    private static var scrollEventHandlers = [UIScrollView: (String, (String, String, [String: Any]) -> Void)]()
+    
+    // Store strong reference to self when views are registered
+    private static var registeredScrollViews = [UIScrollView: DCFScrollViewComponent]()
+    
     required override init() {
         super.init()
     }
@@ -25,10 +34,29 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
     func updateView(_ view: UIView, withProps props: [String: Any]) -> Bool {
         guard let scrollView = view as? UIScrollView else { return false }
         
-        // Set shows indicator if specified
-        if let showsIndicator = props["showsIndicator"] as? Bool {
-            scrollView.showsVerticalScrollIndicator = showsIndicator
-            scrollView.showsHorizontalScrollIndicator = showsIndicator
+        // Set shows indicator if specified (fixed property name)
+        if let showsScrollIndicator = props["showsScrollIndicator"] as? Bool {
+            scrollView.showsVerticalScrollIndicator = showsScrollIndicator
+            scrollView.showsHorizontalScrollIndicator = showsScrollIndicator
+        }
+        
+        // Set scroll indicator color if specified
+        if let scrollIndicatorColor = props["scrollIndicatorColor"] as? String {
+            if #available(iOS 13.0, *) {
+                scrollView.verticalScrollIndicatorInsets = UIEdgeInsets.zero
+                scrollView.horizontalScrollIndicatorInsets = UIEdgeInsets.zero
+                // Note: iOS doesn't directly support scroll indicator color customization
+                // This would require a custom implementation
+            }
+        }
+        
+        // Set scroll indicator size if specified  
+        if let scrollIndicatorSize = props["scrollIndicatorSize"] as? String {
+            // iOS scroll indicators have fixed size, but we can store this for custom implementations
+            objc_setAssociatedObject(scrollView, 
+                                   UnsafeRawPointer(bitPattern: "scrollIndicatorSize".hashValue)!, 
+                                   scrollIndicatorSize, 
+                                   .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
         
         // Set bounces if specified
@@ -180,10 +208,23 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
     
     // Handle scroll view delegate methods
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        triggerEvent(on: scrollView, eventType: "onScrollBegin", eventData: [:])
+        triggerEvent(on: scrollView, eventType: "onScrollBeginDrag", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ]
+        ])
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        triggerEvent(on: scrollView, eventType: "onScrollEndDrag", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ],
+            "willDecelerate": decelerate
+        ])
+        
         if !decelerate {
             triggerEvent(on: scrollView, eventType: "onScrollEnd", eventData: [
                 "contentOffset": [
@@ -209,6 +250,14 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
             "contentOffset": [
                 "x": scrollView.contentOffset.x,
                 "y": scrollView.contentOffset.y
+            ],
+            "contentSize": [
+                "width": scrollView.contentSize.width,
+                "height": scrollView.contentSize.height
+            ],
+            "layoutMeasurement": [
+                "width": scrollView.bounds.width,
+                "height": scrollView.bounds.height
             ]
         ])
     }
@@ -242,6 +291,98 @@ class DCFScrollViewComponent: NSObject, DCFComponent, ComponentMethodHandler, UI
         }
         
         return false
+    }
+    
+    // MARK: - Event Handling
+    
+    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
+                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
+        guard let scrollView = view as? UIScrollView else { 
+            print("❌ Cannot add event listeners to non-scroll view")
+            return 
+        }
+ 
+        // Ensure the delegate is set to sharedInstance for event handling
+        scrollView.delegate = DCFScrollViewComponent.sharedInstance
+        
+        // Store event data with associated objects
+        storeEventData(on: scrollView, viewId: viewId, eventTypes: eventTypes, callback: eventCallback)
+        
+        // Store strong reference to component instance to prevent deallocation
+        DCFScrollViewComponent.registeredScrollViews[scrollView] = DCFScrollViewComponent.sharedInstance
+        
+        print("✅ Successfully added event handlers to scroll view \(viewId)")
+    }
+    
+    // Store event data using multiple methods for redundancy
+    private func storeEventData(on scrollView: UIScrollView, viewId: String, eventTypes: [String], 
+                               callback: @escaping (String, String, [String: Any]) -> Void) {
+        // Store the event information as associated objects - generic keys
+        objc_setAssociatedObject(
+            scrollView,
+            UnsafeRawPointer(bitPattern: "viewId".hashValue)!,
+            viewId,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        
+        objc_setAssociatedObject(
+            scrollView,
+            UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
+            eventTypes,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        
+        objc_setAssociatedObject(
+            scrollView,
+            UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!,
+            callback,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        
+        // Additional redundant storage - scroll specific keys
+        objc_setAssociatedObject(
+            scrollView,
+            UnsafeRawPointer(bitPattern: "scrollViewId".hashValue)!,
+            viewId,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        
+        objc_setAssociatedObject(
+            scrollView,
+            UnsafeRawPointer(bitPattern: "scrollCallback".hashValue)!,
+            callback,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        
+        // Store in static dictionary as additional backup
+        DCFScrollViewComponent.scrollEventHandlers[scrollView] = (viewId, callback)
+    }
+    
+    func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
+        guard let scrollView = view as? UIScrollView else { return }
+        
+        // Clean up all references
+        cleanupEventReferences(from: scrollView, viewId: viewId)
+        
+        print("✅ Removed event listeners from scroll view: \(viewId)")
+    }
+    
+    // Helper to clean up all event references
+    private func cleanupEventReferences(from scrollView: UIScrollView, viewId: String) {
+        // Remove from static handlers dictionary
+        DCFScrollViewComponent.scrollEventHandlers.removeValue(forKey: scrollView)
+        DCFScrollViewComponent.registeredScrollViews.removeValue(forKey: scrollView)
+        
+        // Clear all associated objects
+        let keys = ["viewId", "eventTypes", "eventCallback", "scrollViewId", "scrollCallback"]
+        for key in keys {
+            objc_setAssociatedObject(
+                scrollView,
+                UnsafeRawPointer(bitPattern: key.hashValue)!,
+                nil,
+                .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+            )
+        }
     }
 }
 
