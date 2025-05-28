@@ -9,7 +9,7 @@ import 'package:dcflight/framework/renderer/vdom/component/error_boundary.dart';
 export 'package:dcflight/framework/renderer/vdom/component/store.dart';
 import 'package:dcflight/framework/renderer/vdom/component/dcf_element.dart';
 import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
-import 'package:dcflight/framework/renderer/vdom/component/fragment.dart';
+import 'package:dcflight/framework/renderer/vdom/experimental_stash/fragment.dart';
 
 /// Virtual DOM implementation with efficient reconciliation and state handling
 class VDom {

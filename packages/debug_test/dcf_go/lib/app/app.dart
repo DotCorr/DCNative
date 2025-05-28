@@ -14,8 +14,8 @@ class DCFGo extends StatefulComponent {
       layout: LayoutProps(flex: 1),
       children: [
         TopBar(globalCounter: globalCounter, counter: counter),
-        DCFView(
-          // showsScrollIndicator: true,
+        DCFScrollView(
+          showsScrollIndicator: true,
           style: StyleSheet(
             backgroundColor:
                 counter.value % 2 == 0 ? Colors.amber : Colors.white,
@@ -27,9 +27,9 @@ class DCFGo extends StatefulComponent {
             width: "100%",
             flexDirection: YogaFlexDirection.column,
           ),
-          // horizontal: false,onScroll: (v){
-          //   print("scrolling: $v");
-          // },
+          horizontal: false,onScroll: (v){
+            print("scrolling: $v");
+          },
           children: [
             UserCard(
               onPress: () {
