@@ -39,7 +39,7 @@ class DCFAlert extends StatelessComponent {
     }
 
     return DCFElement(
-      type: 'DCFAlert',
+      type: 'Alert',
       props: {
         'title': title,
         if (message != null) 'message': message,

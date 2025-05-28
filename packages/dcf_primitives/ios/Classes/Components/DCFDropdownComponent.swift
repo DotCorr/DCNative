@@ -1,4 +1,4 @@
-impclass DCFDropdownComponent: NSObject, DCFComponent {t UIKit
+import UIKit
 import dcflight
 
 class DCFDropdownComponent: NSObject, DCFComponent {
@@ -105,8 +105,8 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         }
         
         // Trigger onOpen event
-        DCFComponent.triggerEvent(
-            from: button,
+        self.triggerEvent(
+            on: button,
             eventType: "onOpen",
             eventData: [:]
         )
@@ -138,15 +138,15 @@ class DCFDropdownComponent: NSObject, DCFComponent {
             
             let action = UIAlertAction(title: label, style: .default) { _ in
                 // Trigger onValueChange event
-                DCFComponent.triggerEvent(
-                    from: button,
+                self.triggerEvent(
+                    on: button,
                     eventType: "onValueChange",
                     eventData: ["value": value, "item": item]
                 )
                 
                 // Trigger onClose event
-                DCFComponent.triggerEvent(
-                    from: button,
+                self.triggerEvent(
+                    on: button,
                     eventType: "onClose",
                     eventData: [:]
                 )
@@ -157,8 +157,8 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         
         // Add cancel action
         alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
-            DCFComponent.triggerEvent(
-                from: button,
+            self.triggerEvent(
+                on: button,
                 eventType: "onClose",
                 eventData: [:]
             )
@@ -189,16 +189,16 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         dropdownVC.maxHeight = maxHeight
         
         dropdownVC.onSelectionChanged = { selectedValues, selectedItems in
-            DCFComponent.triggerEvent(
-                from: button,
+            self.triggerEvent(
+                on: button,
                 eventType: "onMultiValueChange",
                 eventData: ["values": selectedValues, "items": selectedItems]
             )
         }
         
         dropdownVC.onDismiss = {
-            DCFComponent.triggerEvent(
-                from: button,
+            self.triggerEvent(
+                on: button,
                 eventType: "onClose",
                 eventData: [:]
             )

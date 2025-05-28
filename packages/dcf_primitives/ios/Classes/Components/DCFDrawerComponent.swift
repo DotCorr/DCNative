@@ -52,9 +52,9 @@ class DCFDrawerComponent: NSObject, DCFComponent {
             drawerVC.drawerWidth = width
         }
         
-        // Set background color
+        // Set background color 
         if let backgroundColor = props["drawerBackgroundColor"] as? String {
-            drawerVC.drawerBackgroundColor = ColorUtilities.color(fromHexString: backgroundColor)
+            drawerVC.drawerBackgroundColor = ColorUtilities.color(fromHexString: backgroundColor)!
         }
         
         // Set swipe enabled
@@ -81,8 +81,8 @@ class DCFDrawerComponent: NSObject, DCFComponent {
             
             drawerVC.present(from: presentingController) {
                 // Trigger onDrawerOpen event
-                DCFComponent.triggerEvent(
-                    from: view,
+                self.triggerEvent(
+                    on: view,
                     eventType: "onDrawerOpen",
                     eventData: [:]
                 )
@@ -95,8 +95,8 @@ class DCFDrawerComponent: NSObject, DCFComponent {
         
         drawerVC.dismiss {
             // Trigger onDrawerClose event
-            DCFComponent.triggerEvent(
-                from: view,
+            self.triggerEvent(
+                on: view,
                 eventType: "onDrawerClose",
                 eventData: [:]
             )

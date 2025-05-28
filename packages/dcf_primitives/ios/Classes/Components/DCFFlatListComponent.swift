@@ -11,6 +11,9 @@ class DCFFlatListComponent: NSObject, DCFComponent {
     func createView(props: [String: Any]) -> UIView {
         let flatListView = DCFFlatListView()
         
+        // Set component reference for event triggering
+        flatListView.component = self
+        
         // Store reference
         DCFFlatListComponent.listInstances[flatListView] = flatListView
         
@@ -65,6 +68,9 @@ class DCFFlatListView: UIView {
     private var onScroll: ((CGFloat, CGFloat) -> Void)?
     private var onEndReached: (() -> Void)?
     private var onViewableItemsChanged: (([Int]) -> Void)?
+    
+    // Component reference for event triggering
+    weak var component: DCFFlatListComponent?
     
     // Threshold for onEndReached
     private var onEndReachedThreshold: CGFloat = 0.1
@@ -353,8 +359,8 @@ extension DCFFlatListView: UICollectionViewDelegate, UICollectionViewDelegateFlo
         onScroll?(scrollView.contentOffset.x, scrollView.contentOffset.y)
         
         // Trigger scroll events to bridge
-        DCFComponent.triggerEvent(
-            from: self,
+        component?.triggerEvent(
+            on: self,
             eventType: "onScroll",
             eventData: [
                 "contentOffset": [
@@ -370,32 +376,32 @@ extension DCFFlatListView: UICollectionViewDelegate, UICollectionViewDelegateFlo
     }
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        DCFComponent.triggerEvent(
-            from: self,
+        component?.triggerEvent(
+            on: self,
             eventType: "onScrollBeginDrag",
             eventData: [:]
         )
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        DCFComponent.triggerEvent(
-            from: self,
+        component?.triggerEvent(
+            on: self,
             eventType: "onScrollEndDrag",
             eventData: ["decelerate": decelerate]
         )
     }
     
     func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
-        DCFComponent.triggerEvent(
-            from: self,
+        component?.triggerEvent(
+            on: self,
             eventType: "onMomentumScrollBegin",
             eventData: [:]
         )
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        DCFComponent.triggerEvent(
-            from: self,
+        component?.triggerEvent(
+            on: self,
             eventType: "onMomentumScrollEnd",
             eventData: [:]
         )

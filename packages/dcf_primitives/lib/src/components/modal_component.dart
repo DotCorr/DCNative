@@ -24,7 +24,7 @@ class DCFModal extends StatelessComponent {
   DCFModal({
     super.key,
     this.visible = false,
-    this.presentationStyle = ModalPresentationStyle.automatic,
+    this.presentationStyle = ModalPresentationStyle.formSheet,
     this.transitionStyle = ModalTransitionStyle.coverVertical,
     this.animationType = true,
     this.transparent = false,
@@ -61,7 +61,7 @@ class DCFModal extends StatelessComponent {
     }
 
     return DCFElement(
-      type: 'DCFModal',
+      type: 'Modal',
       props: {
         'visible': visible,
         'presentationStyle': presentationStyle.name,

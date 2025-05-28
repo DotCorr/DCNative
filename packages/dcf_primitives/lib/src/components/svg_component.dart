@@ -61,7 +61,7 @@ class DCFSVG extends StatelessComponent {
   @override
   DCFComponentNode render() {
     return DCFElement(
-      type: 'SVG',
+      type: 'Svg',
       props: {
         ...svgProps.toMap(),
         ...layout.toMap(),

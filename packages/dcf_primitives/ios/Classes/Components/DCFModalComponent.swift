@@ -113,8 +113,8 @@ class DCFModalComponent: NSObject, DCFComponent {
     }
     
     private func triggerEvent(view: UIView, eventType: String, data: [String: Any]) {
-        DCFComponent.triggerEvent(
-            from: view,
+        self.triggerEvent(
+            on: view,
             eventType: eventType,
             eventData: data
         )

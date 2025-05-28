@@ -99,8 +99,8 @@ class DCFContextMenuComponent: NSObject, DCFComponent {
             
             let action = UIAlertAction(title: title, style: style) { _ in
                 // Trigger onPress event
-                DCFComponent.triggerEvent(
-                    from: view,
+                self.triggerEvent(
+                    on: view,
                     eventType: "onPress",
                     eventData: ["action": actionData]
                 )
@@ -111,8 +111,8 @@ class DCFContextMenuComponent: NSObject, DCFComponent {
         
         // Add cancel action
         alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
-            DCFComponent.triggerEvent(
-                from: view,
+            self.triggerEvent(
+                on: view,
                 eventType: "onCancel",
                 eventData: [:]
             )
@@ -159,8 +159,8 @@ extension DCFContextMenuComponent: UIContextMenuInteractionDelegate {
         let view = interaction.view!
         
         // Trigger onPreviewTap event
-        DCFComponent.triggerEvent(
-            from: view,
+        self.triggerEvent(
+            on: view,
             eventType: "onPreviewTap",
             eventData: [:]
         )
@@ -199,7 +199,7 @@ extension DCFContextMenuComponent: UIContextMenuInteractionDelegate {
         let menuActions = actions.compactMap { actionData -> UIAction? in
             guard let title = actionData["title"] as? String else { return nil }
             
-            let attributes: UIAction.Attributes = []
+            var attributes: UIAction.Attributes = []
             if let destructive = actionData["destructive"] as? Bool, destructive {
                 attributes.insert(.destructive)
             }
@@ -211,8 +211,8 @@ extension DCFContextMenuComponent: UIContextMenuInteractionDelegate {
             
             return UIAction(title: title, image: image, attributes: attributes) { _ in
                 // Trigger onPress event
-                DCFComponent.triggerEvent(
-                    from: view,
+                self.triggerEvent(
+                    on: view,
                     eventType: "onPress",
                     eventData: ["action": actionData]
                 )

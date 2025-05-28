@@ -89,8 +89,8 @@ class DCFAlertComponent: NSObject, DCFComponent {
     
     private func triggerEvent(viewId: String, eventType: String, data: [String: Any]) {
         // Use the standard event triggering mechanism
-        DCFComponent.triggerEvent(
-            from: UIView(), // Placeholder view
+        self.triggerEvent(
+            on: UIView(), // Placeholder view
             eventType: eventType,
             eventData: data
         )

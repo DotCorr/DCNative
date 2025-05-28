@@ -222,8 +222,8 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         let currentText = textField.text ?? ""
         let newText = (currentText as NSString).replacingCharacters(in: range, with: string)
         
-        DCFComponent.triggerEvent(
-            from: textField,
+        DCFTextInputComponent.sharedInstance.triggerEvent(
+            on: textField,
             eventType: "onChangeText",
             eventData: ["text": newText]
         )
@@ -232,24 +232,24 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
     }
     
     func textFieldDidBeginEditing(_ textField: UITextField) {
-        DCFComponent.triggerEvent(
-            from: textField,
+        DCFTextInputComponent.sharedInstance.triggerEvent(
+            on: textField,
             eventType: "onFocus",
             eventData: [:]
         )
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
-        DCFComponent.triggerEvent(
-            from: textField,
+        DCFTextInputComponent.sharedInstance.triggerEvent(
+            on: textField,
             eventType: "onBlur",
             eventData: [:]
         )
     }
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        DCFComponent.triggerEvent(
-            from: textField,
+        DCFTextInputComponent.sharedInstance.triggerEvent(
+            on: textField,
             eventType: "onSubmitEditing",
             eventData: ["text": textField.text ?? ""]
         )
@@ -263,8 +263,8 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         let currentText = textView.text ?? ""
         let newText = (currentText as NSString).replacingCharacters(in: range, with: text)
         
-        DCFComponent.triggerEvent(
-            from: textView,
+        DCFTextInputComponent.sharedInstance.triggerEvent(
+            on: textView,
             eventType: "onChangeText",
             eventData: ["text": newText]
         )
@@ -273,16 +273,16 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
     }
     
     func textViewDidBeginEditing(_ textView: UITextView) {
-        DCFComponent.triggerEvent(
-            from: textView,
+        DCFTextInputComponent.sharedInstance.triggerEvent(
+            on: textView,
             eventType: "onFocus",
             eventData: [:]
         )
     }
     
     func textViewDidEndEditing(_ textView: UITextView) {
-        DCFComponent.triggerEvent(
-            from: textView,
+        DCFTextInputComponent.sharedInstance.triggerEvent(
+            on: textView,
             eventType: "onBlur",
             eventData: [:]
         )
