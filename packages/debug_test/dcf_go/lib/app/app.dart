@@ -41,6 +41,18 @@ class DCFGo extends StatefulComponent {
               },
               children: [
                 DCFScrollView(
+                  onScrollBeginDrag: (v) {
+                    print("scroll begin drag: $v");
+                  },
+                  onScrollEndDrag: (v) {
+                    print("scroll end drag: $v");
+                  },
+                  onScrollEnd: (v) {
+                    print("scroll end: $v");
+                  },
+                  showsScrollIndicator: true,
+                  scrollIndicatorColor: Colors.green,
+                  scrollIndicatorSize: 10,
                   horizontal: true,
                   children: bunchCards(),
                   
