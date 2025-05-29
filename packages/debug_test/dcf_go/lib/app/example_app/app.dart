@@ -31,16 +31,16 @@ class ExampleApp extends StatefulComponent {
         flexDirection: YogaFlexDirection.column,
         justifyContent: YogaJustifyContent.flexStart,
         alignItems: YogaAlign.stretch,
-        padding: 100
+        padding: 100,
       ),
       children: [
-      
-       DCFModal(
+        DCFModal(
           visible: infoModal.value,
           children: [
             DCFView(
               layout: LayoutProps(
                 flex: 1,
+                padding: 100,
                 justifyContent: YogaJustifyContent.center,
                 alignItems: YogaAlign.center,
               ),
@@ -62,15 +62,14 @@ class ExampleApp extends StatefulComponent {
           statusBarTranslucent: true,
           onDismiss: () {
             infoModal.setValue(!infoModal.value);
-             print("dismissed modal");
-           
+            print("dismissed modal");
+
             alert.setValue(true);
           },
-         
         ),
 
         DCFTextInput(
-        style: StyleSheet(backgroundColor: Colors.pink),
+          style: StyleSheet(backgroundColor: Colors.pink),
           value: "Search",
           onChangeText: (v) {
             print("Text input changed: $v");
@@ -83,24 +82,21 @@ class ExampleApp extends StatefulComponent {
             print("Alert button pressed, alert set to ${alert.value}");
           },
         ),
-         DCFButton(
+        DCFButton(
           buttonProps: ButtonProps(title: "Show Modal"),
           onPress: (v) {
             alert.setValue(!infoModal.value);
             print("Modal button pressed, alert set to ${alert.value}");
           },
-        
         ),
-        
 
         DCFButton(
           buttonProps: ButtonProps(title: "Show Conntext Menu"),
           onPress: (v) {
             contextMenu.setValue(!infoModal.value);
-         
           },
         ),
-        ],
+      ],
     );
   }
 }

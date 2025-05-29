@@ -2,12 +2,20 @@ import UIKit
 import dcflight
 
 class DCFContextMenuComponent: NSObject, DCFComponent {
+    static let sharedInstance = DCFContextMenuComponent()
+    
+    // Store event handlers for context menu views
+    static var contextMenuEventHandlers = [UIView: (String, [String], (String, String, [String: Any]) -> Void)]()
+    
     required override init() {
         super.init()
     }
     
     func createView(props: [String: Any]) -> UIView {
         let containerView = UIView()
+        
+        // Apply StyleSheet properties
+        containerView.applyStyles(props: props)
         
         // Setup context menu interaction
         if #available(iOS 13.0, *) {
@@ -21,6 +29,9 @@ class DCFContextMenuComponent: NSObject, DCFComponent {
     }
     
     func updateView(_ view: UIView, withProps props: [String: Any]) -> Bool {
+        // Apply StyleSheet properties
+        view.applyStyles(props: props)
+        
         // Update context menu configuration
         if #available(iOS 13.0, *) {
             setupContextMenuInteraction(for: view, props: props)
@@ -99,8 +110,8 @@ class DCFContextMenuComponent: NSObject, DCFComponent {
             
             let action = UIAlertAction(title: title, style: style) { _ in
                 // Trigger onPress event
-                self.triggerEvent(
-                    on: view,
+                self.triggerEventIfRegistered(
+                    view,
                     eventType: "onPress",
                     eventData: ["action": actionData]
                 )
@@ -111,8 +122,8 @@ class DCFContextMenuComponent: NSObject, DCFComponent {
         
         // Add cancel action
         alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
-            self.triggerEvent(
-                on: view,
+            self.triggerEventIfRegistered(
+                view,
                 eventType: "onCancel",
                 eventData: [:]
             )
@@ -159,8 +170,8 @@ extension DCFContextMenuComponent: UIContextMenuInteractionDelegate {
         let view = interaction.view!
         
         // Trigger onPreviewTap event
-        self.triggerEvent(
-            on: view,
+        self.triggerEventIfRegistered(
+            view,
             eventType: "onPreviewTap",
             eventData: [:]
         )
@@ -211,8 +222,8 @@ extension DCFContextMenuComponent: UIContextMenuInteractionDelegate {
             
             return UIAction(title: title, image: image, attributes: attributes) { _ in
                 // Trigger onPress event
-                self.triggerEvent(
-                    on: view,
+                self.triggerEventIfRegistered(
+                    view,
                     eventType: "onPress",
                     eventData: ["action": actionData]
                 )
@@ -220,5 +231,75 @@ extension DCFContextMenuComponent: UIContextMenuInteractionDelegate {
         }
         
         return UIMenu(title: "", children: menuActions)
+    }
+    
+    // Trigger event if the view has been registered for that event type
+    private func triggerEventIfRegistered(_ view: UIView, eventType: String, eventData: [String: Any]) {
+        // Try handlers dictionary first
+        if let (viewId, eventTypes, callback) = DCFContextMenuComponent.contextMenuEventHandlers[view] {
+            if eventTypes.contains(eventType) {
+                print("✅ Triggering ContextMenu event: \(eventType) for view \(viewId)")
+                callback(viewId, eventType, eventData)
+                return
+            }
+        }
+        
+        // Fallback to associated objects
+        guard let eventTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String],
+              let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void,
+              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String else {
+            print("📋 ContextMenu event not registered - no handlers found for \(eventType)")
+            return
+        }
+        
+        if eventTypes.contains(eventType) {
+            print("✅ Triggering ContextMenu event (fallback): \(eventType) for view \(viewId)")
+            callback(viewId, eventType, eventData)
+        } else {
+            print("📋 ContextMenu event \(eventType) not in registered types: \(eventTypes)")
+        }
+    }
+}
+
+// MARK: - Event Handling Implementation
+extension DCFContextMenuComponent {
+    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
+                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
+        print("📋 Adding ContextMenu event listeners to view \(viewId): \(eventTypes)")
+        
+        // Store event registration info
+        DCFContextMenuComponent.contextMenuEventHandlers[view] = (viewId, eventTypes, eventCallback)
+        
+        // Also store using associated objects as backup
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, 
+                               eventCallback, 
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "viewId".hashValue)!, 
+                               viewId, 
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
+                               eventTypes,
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("✅ Successfully registered ContextMenu event handlers for view \(viewId)")
+    }
+    
+    func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
+        print("📋 Removing ContextMenu event listeners from view \(viewId): \(eventTypes)")
+        
+        // Remove from handlers dictionary
+        DCFContextMenuComponent.contextMenuEventHandlers.removeValue(forKey: view)
+        
+        // Clean up associated objects
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("✅ Removed ContextMenu event handlers for view \(viewId)")
     }
 }

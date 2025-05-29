@@ -2,6 +2,10 @@ import UIKit
 import dcflight
 
 class DCFDropdownComponent: NSObject, DCFComponent {
+    static let sharedInstance = DCFDropdownComponent()
+    
+    // Store event handlers for dropdown views
+    static var dropdownEventHandlers = [UIView: (String, [String], (String, String, [String: Any]) -> Void)]()
     
     required override init() {
         super.init()
@@ -15,6 +19,9 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         button.layer.borderColor = UIColor.systemGray4.cgColor
         button.contentHorizontalAlignment = .left
         button.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 40)
+        
+        // Apply StyleSheet properties
+        button.applyStyles(props: props)
         
         // Add dropdown arrow
         let arrowImageView = UIImageView(image: UIImage(systemName: "chevron.down"))
@@ -41,6 +48,9 @@ class DCFDropdownComponent: NSObject, DCFComponent {
     
     func updateView(_ view: UIView, withProps props: [String: Any]) -> Bool {
         guard let button = view as? UIButton else { return false }
+        
+        // Apply StyleSheet properties
+        button.applyStyles(props: props)
         
         // Store props for dropdown presentation
         objc_setAssociatedObject(
@@ -105,8 +115,8 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         }
         
         // Trigger onOpen event
-        self.triggerEvent(
-            on: button,
+        self.triggerEventIfRegistered(
+            button,
             eventType: "onOpen",
             eventData: [:]
         )
@@ -138,15 +148,15 @@ class DCFDropdownComponent: NSObject, DCFComponent {
             
             let action = UIAlertAction(title: label, style: .default) { _ in
                 // Trigger onValueChange event
-                self.triggerEvent(
-                    on: button,
+                self.triggerEventIfRegistered(
+                    button,
                     eventType: "onValueChange",
                     eventData: ["value": value, "item": item]
                 )
                 
                 // Trigger onClose event
-                self.triggerEvent(
-                    on: button,
+                self.triggerEventIfRegistered(
+                    button,
                     eventType: "onClose",
                     eventData: [:]
                 )
@@ -157,8 +167,8 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         
         // Add cancel action
         alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
-            self.triggerEvent(
-                on: button,
+            self.triggerEventIfRegistered(
+                button,
                 eventType: "onClose",
                 eventData: [:]
             )
@@ -189,16 +199,16 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         dropdownVC.maxHeight = maxHeight
         
         dropdownVC.onSelectionChanged = { selectedValues, selectedItems in
-            self.triggerEvent(
-                on: button,
+            self.triggerEventIfRegistered(
+                button,
                 eventType: "onMultiValueChange",
                 eventData: ["values": selectedValues, "items": selectedItems]
             )
         }
         
         dropdownVC.onDismiss = {
-            self.triggerEvent(
-                on: button,
+            self.triggerEventIfRegistered(
+                button,
                 eventType: "onClose",
                 eventData: [:]
             )
@@ -213,6 +223,75 @@ class DCFDropdownComponent: NSObject, DCFComponent {
             
             presentingController.present(dropdownVC, animated: true)
         }
+    }
+    
+    // Trigger event if the view has been registered for that event type
+    private func triggerEventIfRegistered(_ view: UIView, eventType: String, eventData: [String: Any]) {
+        // Try handlers dictionary first
+        if let (viewId, eventTypes, callback) = DCFDropdownComponent.dropdownEventHandlers[view] {
+            if eventTypes.contains(eventType) {
+                print("✅ Triggering Dropdown event: \(eventType) for view \(viewId)")
+                callback(viewId, eventType, eventData)
+                return
+            }
+        }
+        
+        // Fallback to associated objects
+        guard let eventTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String],
+              let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void,
+              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String else {
+            print("📋 Dropdown event not registered - no handlers found for \(eventType)")
+            return
+        }
+        
+        if eventTypes.contains(eventType) {
+            print("✅ Triggering Dropdown event (fallback): \(eventType) for view \(viewId)")
+            callback(viewId, eventType, eventData)
+        } else {
+            print("📋 Dropdown event \(eventType) not in registered types: \(eventTypes)")
+        }
+    }
+    
+    // MARK: - Event Handling Implementation
+    
+    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
+                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
+        print("📋 Adding Dropdown event listeners to view \(viewId): \(eventTypes)")
+        
+        // Store event registration info
+        DCFDropdownComponent.dropdownEventHandlers[view] = (viewId, eventTypes, eventCallback)
+        
+        // Also store using associated objects as backup
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, 
+                               eventCallback, 
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "viewId".hashValue)!, 
+                               viewId, 
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
+                               eventTypes,
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("✅ Successfully registered Dropdown event handlers for view \(viewId)")
+    }
+    
+    func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
+        print("📋 Removing Dropdown event listeners from view \(viewId): \(eventTypes)")
+        
+        // Remove from handlers dictionary
+        DCFDropdownComponent.dropdownEventHandlers.removeValue(forKey: view)
+        
+        // Clean up associated objects
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("✅ Removed Dropdown event handlers for view \(viewId)")
     }
 }
 

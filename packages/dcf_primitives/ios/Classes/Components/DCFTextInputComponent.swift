@@ -100,7 +100,7 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         }
         
         // Apply StyleSheet properties for TextField
-        applyStyleSheetProperties(to: textField, props: props)
+        textField.applyStyles(props: props)
 
         return true
     }
@@ -136,7 +136,7 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         }
         
         // Apply StyleSheet properties for TextView
-        applyStyleSheetProperties(to: textView, props: props)
+        textView.applyStyles(props: props)
 
         return true
     }
@@ -207,57 +207,6 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
             return .allCharacters
         default:
             return .none
-        }
-    }
-    
-    // MARK: - StyleSheet Support
-    
-    private func applyStyleSheetProperties(to view: UIView, props: [String: Any]) {
-        // Apply background color if specified
-        if let backgroundColor = props["backgroundColor"] as? String {
-            view.backgroundColor = ColorUtilities.color(fromHexString: backgroundColor)
-        }
-        
-        // Apply text color if specified (for both UITextField and UITextView)
-        if let textColor = props["textColor"] as? String {
-            let color = ColorUtilities.color(fromHexString: textColor)
-            if let textField = view as? UITextField {
-                textField.textColor = color
-            } else if let textView = view as? UITextView {
-                textView.textColor = color
-            }
-        }
-        
-        // Apply font size if specified
-        if let fontSize = props["fontSize"] as? CGFloat {
-            if let textField = view as? UITextField {
-                let currentFont = textField.font ?? UIFont.systemFont(ofSize: 16)
-                textField.font = currentFont.withSize(fontSize)
-            } else if let textView = view as? UITextView {
-                let currentFont = textView.font ?? UIFont.systemFont(ofSize: 16)
-                textView.font = currentFont.withSize(fontSize)
-            }
-        }
-        
-        // Apply border color if specified
-        if let borderColor = props["borderColor"] as? String {
-            view.layer.borderColor = ColorUtilities.color(fromHexString: borderColor)?.cgColor
-        }
-        
-        // Apply border width if specified
-        if let borderWidth = props["borderWidth"] as? CGFloat {
-            view.layer.borderWidth = borderWidth
-        }
-        
-        // Apply border radius if specified
-        if let borderRadius = props["borderRadius"] as? CGFloat {
-            view.layer.cornerRadius = borderRadius
-            view.clipsToBounds = true
-        }
-        
-        // Apply opacity if specified
-        if let opacity = props["opacity"] as? CGFloat {
-            view.alpha = opacity
         }
     }
     

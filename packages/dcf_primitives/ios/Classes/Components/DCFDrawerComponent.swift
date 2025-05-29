@@ -2,6 +2,19 @@ import UIKit
 import dcflight
 
 class DCFDrawerComponent: NSObject, DCFComponent {
+    static let sharedInstance = DCFDrawerComponent()
+    
+    // Store event handlers for drawer views
+    static var drawerEventHandlers = [UIView: (String, [String], (String, String, [String: Any]) -> Void)]()
+    
+    private static var activeDrawers: [UIView: DrawerViewController] = []
+    
+    required override init() {
+        super.init()
+    }Kit
+import dcflight
+
+class DCFDrawerComponent: NSObject, DCFComponent {
     private static var activeDrawers: [UIView: DrawerViewController] = [:]
     
     required override init() {
@@ -12,6 +25,9 @@ class DCFDrawerComponent: NSObject, DCFComponent {
         let containerView = UIView()
         containerView.backgroundColor = UIColor.clear
         
+        // Apply StyleSheet properties
+        containerView.applyStyles(props: props)
+        
         // Create drawer setup
         setupDrawer(for: containerView, props: props)
         
@@ -19,6 +35,9 @@ class DCFDrawerComponent: NSObject, DCFComponent {
     }
     
     func updateView(_ view: UIView, withProps props: [String: Any]) -> Bool {
+        // Apply StyleSheet properties
+        view.applyStyles(props: props)
+        
         if let open = props["open"] as? Bool {
             if open {
                 openDrawer(for: view, props: props)
@@ -54,7 +73,7 @@ class DCFDrawerComponent: NSObject, DCFComponent {
         
         // Set background color 
         if let backgroundColor = props["drawerBackgroundColor"] as? String {
-            drawerVC.drawerBackgroundColor = ColorUtilities.color(fromHexString: backgroundColor)!
+            drawerVC.drawerBackgroundColor = ColorUtilities.color(fromHexString: backgroundColor) ?? UIColor.white
         }
         
         // Set swipe enabled
@@ -81,8 +100,8 @@ class DCFDrawerComponent: NSObject, DCFComponent {
             
             drawerVC.present(from: presentingController) {
                 // Trigger onDrawerOpen event
-                self.triggerEvent(
-                    on: view,
+                self.triggerEventIfRegistered(
+                    view,
                     eventType: "onDrawerOpen",
                     eventData: [:]
                 )
@@ -95,8 +114,8 @@ class DCFDrawerComponent: NSObject, DCFComponent {
         
         drawerVC.dismiss {
             // Trigger onDrawerClose event
-            self.triggerEvent(
-                on: view,
+            self.triggerEventIfRegistered(
+                view,
                 eventType: "onDrawerClose",
                 eventData: [:]
             )
@@ -114,6 +133,75 @@ class DCFDrawerComponent: NSObject, DCFComponent {
         default:
             return .left
         }
+    }
+    
+    // Trigger event if the view has been registered for that event type
+    private func triggerEventIfRegistered(_ view: UIView, eventType: String, eventData: [String: Any]) {
+        // Try handlers dictionary first
+        if let (viewId, eventTypes, callback) = DCFDrawerComponent.drawerEventHandlers[view] {
+            if eventTypes.contains(eventType) {
+                print("✅ Triggering Drawer event: \(eventType) for view \(viewId)")
+                callback(viewId, eventType, eventData)
+                return
+            }
+        }
+        
+        // Fallback to associated objects
+        guard let eventTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String],
+              let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void,
+              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String else {
+            print("🚪 Drawer event not registered - no handlers found for \(eventType)")
+            return
+        }
+        
+        if eventTypes.contains(eventType) {
+            print("✅ Triggering Drawer event (fallback): \(eventType) for view \(viewId)")
+            callback(viewId, eventType, eventData)
+        } else {
+            print("🚪 Drawer event \(eventType) not in registered types: \(eventTypes)")
+        }
+    }
+    
+    // MARK: - Event Handling Implementation
+    
+    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
+                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
+        print("🚪 Adding Drawer event listeners to view \(viewId): \(eventTypes)")
+        
+        // Store event registration info
+        DCFDrawerComponent.drawerEventHandlers[view] = (viewId, eventTypes, eventCallback)
+        
+        // Also store using associated objects as backup
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, 
+                               eventCallback, 
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "viewId".hashValue)!, 
+                               viewId, 
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
+                               eventTypes,
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("✅ Successfully registered Drawer event handlers for view \(viewId)")
+    }
+    
+    func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
+        print("🚪 Removing Drawer event listeners from view \(viewId): \(eventTypes)")
+        
+        // Remove from handlers dictionary
+        DCFDrawerComponent.drawerEventHandlers.removeValue(forKey: view)
+        
+        // Clean up associated objects
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("✅ Removed Drawer event handlers for view \(viewId)")
     }
 }
 

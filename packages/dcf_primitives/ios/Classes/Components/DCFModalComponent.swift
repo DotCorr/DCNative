@@ -40,11 +40,14 @@ class DCFModalComponent: NSObject, DCFComponent {
         let modalView = UIView()
         
         // Configure modal view
-        if let backgroundColor = props["backgroundColor"] as? String {
-            modalView.backgroundColor = ColorUtilities.color(fromHexString: backgroundColor)
-        } else if let transparent = props["transparent"] as? Bool, transparent {
+        // Apply StyleSheet properties
+        modalView.applyStyles(props: props)
+        
+        // Handle modal-specific background properties
+        if let transparent = props["transparent"] as? Bool, transparent {
             modalView.backgroundColor = UIColor.clear
-        } else {
+        } else if modalView.backgroundColor == nil {
+            // Only set default if no backgroundColor was specified in StyleSheet
             modalView.backgroundColor = UIColor.white
         }
         

@@ -2,7 +2,11 @@ import UIKit
 import dcflight
 
 class DCFFlatListComponent: NSObject, DCFComponent {
+    static let sharedInstance = DCFFlatListComponent()
     private static var listInstances: [UIView: DCFFlatListView] = [:]
+    
+    // Event handlers storage following ScrollView pattern
+    static var flatListEventHandlers: [UIView: (String, [String], (String, String, [String: Any]) -> Void)] = [:]
     
     required override init() {
         super.init()
@@ -17,6 +21,9 @@ class DCFFlatListComponent: NSObject, DCFComponent {
         // Store reference
         DCFFlatListComponent.listInstances[flatListView] = flatListView
         
+        // Apply StyleSheet support
+        flatListView.applyStyles(props: props)
+        
         // Apply initial properties
         updateView(flatListView, withProps: props)
         
@@ -26,8 +33,45 @@ class DCFFlatListComponent: NSObject, DCFComponent {
     func updateView(_ view: UIView, withProps props: [String: Any]) -> Bool {
         guard let flatListView = view as? DCFFlatListView else { return false }
         
+        // Apply StyleSheet support
+        flatListView.applyStyles(props: props)
+        
         flatListView.updateWithProps(props)
         return true
+    }
+    
+    // MARK: - Event Management Following ScrollView Pattern
+    
+    func addEventListeners(to view: UIView, events: [String], jsModuleName: String, with callback: @escaping (String, String, [String: Any]) -> Void) {
+        DCFFlatListComponent.flatListEventHandlers[view] = (jsModuleName, events, callback)
+        
+        // Also store in associated objects as fallback
+        objc_setAssociatedObject(view, &DCFAssociatedKeys.eventHandlerKey, (jsModuleName, events, callback), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+    
+    func removeEventListeners(from view: UIView) {
+        DCFFlatListComponent.flatListEventHandlers.removeValue(forKey: view)
+        objc_setAssociatedObject(view, &DCFAssociatedKeys.eventHandlerKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+    
+    private func triggerEventIfRegistered(_ view: UIView, eventType: String, eventData: [String: Any]) {
+        // Try static dictionary first
+        if let (jsModuleName, events, callback) = DCFFlatListComponent.flatListEventHandlers[view] {
+            if events.contains(eventType) {
+                callback(jsModuleName, eventType, eventData)
+                return
+            }
+        }
+        
+        // Fallback to associated objects
+        if let (jsModuleName, events, callback) = objc_getAssociatedObject(view, &DCFAssociatedKeys.eventHandlerKey) as? (String, [String], (String, String, [String: Any]) -> Void) {
+            if events.contains(eventType) {
+                callback(jsModuleName, eventType, eventData)
+                return
+            }
+        }
+        
+        // Silent fallback - no error logging for better performance
     }
 }
 
@@ -359,8 +403,8 @@ extension DCFFlatListView: UICollectionViewDelegate, UICollectionViewDelegateFlo
         onScroll?(scrollView.contentOffset.x, scrollView.contentOffset.y)
         
         // Trigger scroll events to bridge
-        component?.triggerEvent(
-            on: self,
+        component?.triggerEventIfRegistered(
+            self,
             eventType: "onScroll",
             eventData: [
                 "contentOffset": [
@@ -376,32 +420,32 @@ extension DCFFlatListView: UICollectionViewDelegate, UICollectionViewDelegateFlo
     }
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        component?.triggerEvent(
-            on: self,
+        component?.triggerEventIfRegistered(
+            self,
             eventType: "onScrollBeginDrag",
             eventData: [:]
         )
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        component?.triggerEvent(
-            on: self,
+        component?.triggerEventIfRegistered(
+            self,
             eventType: "onScrollEndDrag",
             eventData: ["decelerate": decelerate]
         )
     }
     
     func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
-        component?.triggerEvent(
-            on: self,
+        component?.triggerEventIfRegistered(
+            self,
             eventType: "onMomentumScrollBegin",
             eventData: [:]
         )
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        component?.triggerEvent(
-            on: self,
+        component?.triggerEventIfRegistered(
+            self,
             eventType: "onMomentumScrollEnd",
             eventData: [:]
         )
