@@ -3,21 +3,18 @@ import 'package:dcf_primitives/dcf_primitives.dart';
 import 'package:dcflight/dcflight.dart';
 import 'package:flutter/material.dart';
 
-class SampleModal extends StatefulComponent {
+class SampleModal extends StatelessComponent {
  
   @override
   render() { 
-   final modal = useStore(modalStore);
-    final textVal = useStore(textValStore);
-    final bg = useStore(bgStore);
     return DCFModal(
-      visible: modal.state,
+      visible: modalStore.state,
       statusBarTranslucent: false,
-      presentationStyle: ModalPresentationStyle.pageSheet,
+      presentationStyle: ModalPresentationStyle.popover,
       borderRadius: 100,
       header: ModalHeaderOptions(
-        title: "Settings Modal",
-        titleColor: Colors.orange,
+        title: "Settings modalStore",
+        titleColor: Colors.black,
         fontSize: 18,
         fontWeight: "bold",
         leftButton: ModalHeaderButton(
@@ -30,30 +27,26 @@ class SampleModal extends StatefulComponent {
           style: ModalHeaderButtonStyle.bordered,
           onPress: () => print("Save button pressed"),
         ),
-        showCloseButton: false, // We have custom buttons
+     
       ),
       onShow: () {
-        print("🔥 MODAL SHOW CALLBACK CALLED!");
+        print("🔥 modalStore SHOW CALLBACK CALLED!");
       },
       onLeftButtonPress: () {
-        print("🔘 Left button pressed - closing modal");
-        modal.setState(false);
+        print("🔘 Left button pressed - closing modalStore");
+        modalStore.setState(false);
       },
       onRightButtonPress: () {
         print("✅ Right button pressed - saving data");
         // You could save data here, then close
-        modal.setState(false);
+        modalStore.setState(false);
       },
 
       onDismiss: () {
-        print("🔥 MODAL DISMISS CALLBACK CALLED!");
-        modal.setState(false);
+        print("🔥 modalStore DISMISS CALLBACK CALLED!");
+        modalStore.setState(false);
       },
 
-      onRequestClose: () {
-        print("🔒 Modal request close - closing modal");
-        // modal.setState(false);
-      },
 
       children: [
         DCFScrollView(
@@ -93,30 +86,30 @@ class SampleModal extends StatefulComponent {
                     borderWidth: 0,
                     backgroundColor: Colors.pink,
                   ),
-                  value: textVal.state,
+                  value: textValStore.state,
                   textColor: Colors.amber,
                   onFocus:
-                      () => print("modal textinput focused ${textVal.state}"),
+                      () => print("modalStore textinput focused ${textValStore.state}"),
                   onBlur:
-                      () => print("modal textinput blurred ${textVal.state}"),
+                      () => print("modalStore textinput blurred ${textValStore.state}"),
                   onChangeText: (v) {
-                    textVal.setState(v);
-                    print("modal textinput changed $v");
+                    textValStore.setState(v);
+                    print("modalStore textinput changed $v");
                   },
                 );
               },
             ),
-            DCFText(content: "This is a modal"),
+            DCFText(content: "This is a modalStore"),
             DCFButton(
               buttonProps: ButtonProps(title: "BG Color change"),
               onPress: (v) {
-                bg.setState(Colors.amber);
+                bgStore.setState(Colors.amber);
               },
             ),
             DCFButton(
               buttonProps: ButtonProps(title: "Close"),
               onPress: (v) {
-                modal.setState(false);
+                modalStore.setState(false);
               },
             ),
           ],

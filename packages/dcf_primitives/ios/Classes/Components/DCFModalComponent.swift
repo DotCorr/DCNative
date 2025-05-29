@@ -105,6 +105,13 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
             let navigationController = UINavigationController(rootViewController: contentViewController)
             modalViewController = navigationController
             
+            // Apply border radius to the navigation controller's view (the outermost container)
+            if let borderRadius = props["borderRadius"] as? Double {
+                navigationController.view.layer.cornerRadius = CGFloat(borderRadius)
+                navigationController.view.layer.masksToBounds = true
+                navigationController.view.clipsToBounds = true
+            }
+            
             // Configure navigation bar (header)
             setupModalHeader(navigationController: navigationController, 
                            contentViewController: contentViewController,
@@ -115,6 +122,8 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
             let plainViewController = UIViewController()
             plainViewController.view = modalView
             modalViewController = plainViewController
+            
+            // For plain view controller, border radius is already applied to modalView above
         }
         
         // Store weak reference to container view for delegate callbacks
@@ -193,11 +202,20 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
         view.alpha = 0
         view.frame = CGRect.zero
         
+        // Mark this as a programmatic dismissal to avoid duplicate callbacks
+        objc_setAssociatedObject(
+            modalViewController,
+            UnsafeRawPointer(bitPattern: "programmaticDismissal".hashValue)!,
+            true,
+            .OBJC_ASSOCIATION_RETAIN
+        )
+        
         modalViewController.dismiss(animated: true) {
             // Clean up reference
             DCFModalComponent.activeModals.removeValue(forKey: view)
             
-            // Trigger onDismiss event using same pattern as TouchableOpacity
+            // Trigger onDismiss event - only if this was a programmatic dismissal
+            // (If user dismissed with gesture, presentationControllerDidDismiss will handle it)
             self.triggerEvent(view, eventType: "onDismiss", eventData: [:])
         }
     }
@@ -362,6 +380,12 @@ extension DCFModalComponent {
             UnsafeRawPointer(bitPattern: "containerView".hashValue)!
         ) as? UIView {
             
+            // Check if this was a programmatic dismissal to avoid duplicate callbacks
+            let wasProgrammaticDismissal = objc_getAssociatedObject(
+                presentationController.presentedViewController,
+                UnsafeRawPointer(bitPattern: "programmaticDismissal".hashValue)!
+            ) as? Bool ?? false
+            
             // Clean up modal reference
             DCFModalComponent.activeModals.removeValue(forKey: containerView)
             
@@ -370,8 +394,19 @@ extension DCFModalComponent {
                 moveChildrenBackToContainer(from: modalView, to: containerView)
             }
             
-            // Trigger onDismiss event
-            triggerEvent(containerView, eventType: "onDismiss", eventData: [:])
+            // Only trigger onDismiss if this was NOT a programmatic dismissal
+            // (programmatic dismissals are handled in dismissModal method)
+            if !wasProgrammaticDismissal {
+                triggerEvent(containerView, eventType: "onDismiss", eventData: [:])
+            }
+            
+            // Clean up the programmatic dismissal flag
+            objc_setAssociatedObject(
+                presentationController.presentedViewController,
+                UnsafeRawPointer(bitPattern: "programmaticDismissal".hashValue)!,
+                nil,
+                .OBJC_ASSOCIATION_RETAIN
+            )
         }
     }
 }
