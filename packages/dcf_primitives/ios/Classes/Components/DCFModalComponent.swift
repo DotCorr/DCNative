@@ -25,6 +25,9 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
     private static var activeModals: [UIView: (UIViewController, UIView)] = [:]
     private static let sharedInstance = DCFModalComponent()
     
+    // Static storage for modal event handlers (same pattern as button)
+    private static var modalEventHandlers = [UIView: (String, (String, String, [String: Any]) -> Void)]()
+    
     required override init() {
         super.init()
     }
@@ -229,17 +232,51 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
         print("📱 Moved \(children.count) children back to container view (stays hidden)")
     }
     
-    // Trigger event using direct callback pattern (same as TouchableOpacity and TextInput)
+    // Trigger event using multiple backup methods (same pattern as button)
     private func triggerEvent(_ view: UIView, eventType: String, eventData: [String: Any]) {
-        let key = "modal_callback_\(eventType)"
-        guard let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!) as? (String, String, [String: Any]) -> Void,
-              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "modal_viewId".hashValue)!) as? String else {
+        // Try multiple handling methods like button component
+        if tryDirectHandling(view, eventType: eventType, eventData: eventData) ||
+           tryStaticDictionaryHandling(view, eventType: eventType, eventData: eventData) ||
+           tryAssociatedObjectHandling(view, eventType: eventType, eventData: eventData) {
+            // Success
+        } else {
             print("📱 Modal event \(eventType) not registered - no callback found")
-            return
         }
-        
-        print("✅ Triggering modal event: \(eventType) for view \(viewId)")
-        callback(viewId, eventType, eventData)
+    }
+    
+    // Try direct handling via modalViewId and modalCallback
+    private func tryDirectHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
+        if let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "modalViewId".hashValue)!) as? String,
+           let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "modalCallback".hashValue)!) as? (String, String, [String: Any]) -> Void {
+            
+            print("🎯 Direct modal handler found for view: \(viewId)")
+            callback(viewId, eventType, eventData)
+            return true
+        }
+        return false
+    }
+    
+    // Try handling via static dictionary
+    private func tryStaticDictionaryHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
+        if let (viewId, callback) = DCFModalComponent.modalEventHandlers[view] {
+            print("📦 Static dictionary modal handler found for view: \(viewId)")
+            callback(viewId, eventType, eventData)
+            return true
+        }
+        return false
+    }
+    
+    // Try handling via individual event callbacks
+    private func tryAssociatedObjectHandling(_ view: UIView, eventType: String, eventData: [String: Any]) -> Bool {
+        let key = "modal_callback_\(eventType)"
+        if let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!) as? (String, String, [String: Any]) -> Void,
+           let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "modal_viewId".hashValue)!) as? String {
+            
+            print("🔍 Associated object modal handler found for view \(viewId)")
+            callback(viewId, eventType, eventData)
+            return true
+        }
+        return false
     }
     
     // MARK: - Event Handling Implementation
@@ -248,31 +285,52 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
                            eventCallback: @escaping (String, String, [String: Any]) -> Void) {
         print("📱 Adding modal event listeners to view \(viewId): \(eventTypes)")
         
-        // Store individual callbacks for each event type using associated objects (same as TextInput)
+        // Store event data with multiple methods for redundancy (same as button)
+        storeEventData(on: view, viewId: viewId, eventTypes: eventTypes, callback: eventCallback)
+        
+        print("✅ Successfully registered modal event handlers for view \(viewId): \(eventTypes)")
+    }
+    
+    // Store event data using multiple methods for redundancy (same pattern as button)
+    private func storeEventData(on view: UIView, viewId: String, eventTypes: [String], 
+                               callback: @escaping (String, String, [String: Any]) -> Void) {
+        // Store individual callbacks for each event type
         for eventType in eventTypes {
             let key = "modal_callback_\(eventType)"
-            objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, eventCallback, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, callback, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
         
         // Store view ID for reference
         objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "modal_viewId".hashValue)!, viewId, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
-        print("✅ Successfully registered modal event handlers for view \(viewId): \(eventTypes)")
+        // Additional redundant storage (same as button component)
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "modalViewId".hashValue)!, viewId, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "modalCallback".hashValue)!, callback, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        // Store in static dictionary as additional backup
+        DCFModalComponent.modalEventHandlers[view] = (viewId, callback)
     }
     
     func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
         print("📱 Removing modal event listeners from view \(viewId): \(eventTypes)")
         
-        // Remove individual callbacks
-        for eventType in eventTypes {
-            let key = "modal_callback_\(eventType)"
-            objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        }
-        
-        // Remove view ID
-        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "modal_viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        // Clean up all references (same as button)
+        cleanupEventReferences(from: view, viewId: viewId)
         
         print("✅ Removed modal event handlers for view \(viewId)")
+    }
+    
+    // Helper to clean up all event references (same pattern as button)
+    private func cleanupEventReferences(from view: UIView, viewId: String) {
+        // Remove from static handlers dictionary
+        DCFModalComponent.modalEventHandlers.removeValue(forKey: view)
+        
+        // Clear all associated objects
+        let keys = ["modal_viewId", "modalViewId", "modalCallback", "modal_callback_onShow", "modal_callback_onDismiss", 
+                   "modal_callback_onRequestClose", "modal_callback_onLeftButtonPress", "modal_callback_onRightButtonPress"]
+        for key in keys {
+            objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
     }
 }
 
@@ -378,8 +436,8 @@ extension DCFModalComponent {
             let leftButton = createHeaderButton(buttonProps: leftButtonProps, containerView: containerView, isLeftButton: true)
             contentViewController.navigationItem.leftBarButtonItem = leftButton
         } else if let showCloseButton = headerProps["showCloseButton"] as? Bool, showCloseButton {
-            // Add default close button on the left
-            let closeButton = UIBarButtonItem(title: "Close", style: .plain, target: self, action: #selector(defaultCloseButtonTapped(_:)))
+            // Add default close button on the left - use sharedInstance as target
+            let closeButton = UIBarButtonItem(title: "Close", style: .plain, target: DCFModalComponent.sharedInstance, action: #selector(defaultCloseButtonTapped(_:)))
             
             // Store container view reference for close button
             objc_setAssociatedObject(closeButton, 
@@ -412,7 +470,7 @@ extension DCFModalComponent {
             style = .plain
         }
         
-        let button = UIBarButtonItem(title: title, style: style, target: self, action: #selector(headerButtonTapped(_:)))
+        let button = UIBarButtonItem(title: title, style: style, target: DCFModalComponent.sharedInstance, action: #selector(headerButtonTapped(_:)))
         button.isEnabled = enabled
         
         // Store container view and button side for event handling
