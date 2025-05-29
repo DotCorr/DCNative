@@ -7,11 +7,15 @@ class SimpleApp extends StatefulComponent{
   DCFComponentNode render() {
     final modal = useState(false);
     final textVal = useState("text");
+    final bg = useState(Colors.white);
+
     return DCFView(
+      style: StyleSheet(
+        backgroundColor: bg.value
+      ),
       layout: LayoutProps(flex: 1,padding: 100),
       children: [
-       
-       
+
             DCFTextInput(
               value: textVal.value,
               onBlur: () => print("blurred ${textVal.value}"),
@@ -20,6 +24,12 @@ class SimpleApp extends StatefulComponent{
                 print("changed $v");
               },
             ),
+             DCFButton(
+                    buttonProps: ButtonProps(title: "Reset Color"),
+                    onPress: (v) {
+                      bg.setValue(Colors.white);
+                    },
+                  ),
             DCFButton(
               buttonProps: ButtonProps(title: "Scan"),
               onPress: (v) {
@@ -61,6 +71,12 @@ class SimpleApp extends StatefulComponent{
                     },
                   ),
                   DCFText(content: "This is a modal"),
+                  DCFButton(
+                    buttonProps: ButtonProps(title: "BG Color change"),
+                    onPress: (v) {
+                      bg.setValue(Colors.amber);
+                    },
+                  ),
                   DCFButton(
                     buttonProps: ButtonProps(title: "Close"),
                     onPress: (v) {
