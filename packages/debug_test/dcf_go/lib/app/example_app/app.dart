@@ -14,11 +14,10 @@ class ExampleApp extends StatefulComponent {
 
     useEffect(() {
       // This effect runs once when the component is mounted
-      Timer(Duration(seconds: 2), () {
-        // After 2 seconds, we can show the alert
-        infoModal.setValue(!infoModal.value);
-        print("ExampleApp mounted and alert set to true");
-      });
+      
+        // infoModal.setValue(!infoModal.value);
+        
+   
       return () {
         // This cleanup function runs when the component is unmounted
         print("ExampleApp unmounted");
