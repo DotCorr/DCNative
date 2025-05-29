@@ -126,8 +126,8 @@ class DCFModalComponent: NSObject, DCFComponent {
     private func dismissModal(for view: UIView) {
         guard let (modalViewController, modalView) = DCFModalComponent.activeModals[view] else { return }
         
-        // Hide modal children and ensure container stays hidden
-        hideModalChildren(from: modalView)
+        // Move modal children back to container view to preserve them
+        moveChildrenBackToContainer(from: modalView, to: view)
         
         // Ensure container view stays hidden and at zero size
         view.isHidden = true
@@ -157,14 +157,20 @@ class DCFModalComponent: NSObject, DCFComponent {
         print("📱 Moved \(children.count) children to modal view - container stays hidden")
     }
     
-    // Hide modal children and ensure container stays hidden
-    private func hideModalChildren(from modalView: UIView) {
+    // Move children back to container view when modal is dismissed
+    private func moveChildrenBackToContainer(from modalView: UIView, to containerView: UIView) {
         let children = modalView.subviews
         for child in children {
             child.removeFromSuperview()
-            // Children are completely removed - not moved back to main UI
+            containerView.addSubview(child)
         }
-        print("📱 Hidden \(children.count) modal children (not moved to main UI)")
+        
+        // Container must stay hidden - children are preserved but not visible in main UI
+        containerView.isHidden = true
+        containerView.alpha = 0
+        containerView.frame = CGRect.zero
+        
+        print("📱 Moved \(children.count) children back to container view (stays hidden)")
     }
     
     // Trigger event if the view has been registered for that event type
