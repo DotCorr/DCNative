@@ -43,9 +43,20 @@ class SimpleApp extends StatefulComponent{
               },
             ),
             // Triggerbles
-            DCFModal(visible: modal.value, onDismiss: () {
-              modal.setValue(false);
-            }, children: [
+            DCFModal(
+              visible: modal.value, 
+              onDismiss: () {
+                print("🔥 MODAL DISMISSED CALLBACK CALLED!");
+                modal.setValue(false);
+              },
+              onShow: () {
+                print("🔥 MODAL SHOW CALLBACK CALLED!");
+              },
+              onRequestClose: () {
+                print("🔥 MODAL REQUEST CLOSE CALLBACK CALLED!");
+                modal.setValue(false);
+              },
+              children: [
               DCFView(
                 layout: LayoutProps(
                   width: "100%",

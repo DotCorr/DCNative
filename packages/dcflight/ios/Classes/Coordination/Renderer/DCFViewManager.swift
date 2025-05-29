@@ -86,6 +86,14 @@ class DCFViewManager {
         let componentInstance = componentType.init()
         let view = componentInstance.createView(props: props)
         
+        // Tag the view with its component type for event registration
+        objc_setAssociatedObject(
+            view,
+            UnsafeRawPointer(bitPattern: "componentType".hashValue)!,
+            viewType,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        
         // Register the view
         ViewRegistry.shared.registerView(view, id: viewId, type: viewType)
         

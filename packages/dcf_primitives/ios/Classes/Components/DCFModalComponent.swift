@@ -1,7 +1,27 @@
 import UIKit
 import dcflight
 
-class DCFModalComponent: NSObject, DCFComponent {
+// Distinct view class for Modal containers to avoid type collision with ContextMenu
+class DCFModalContainerView: UIView {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setup()
+    }
+    
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setup()
+    }
+    
+    private func setup() {
+        backgroundColor = UIColor.clear
+        isHidden = true
+        clipsToBounds = true
+        alpha = 0
+    }
+}
+
+class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControllerDelegate {
     private static var activeModals: [UIView: (UIViewController, UIView)] = [:]
     private static let sharedInstance = DCFModalComponent()
     
@@ -11,7 +31,7 @@ class DCFModalComponent: NSObject, DCFComponent {
     
     func createView(props: [String: Any]) -> UIView {
         // Modal container view - this should NEVER be visible or participate in layout
-        let containerView = UIView()
+        let containerView = DCFModalContainerView()
         containerView.backgroundColor = UIColor.clear
         containerView.isHidden = true  // Always hidden
         containerView.clipsToBounds = true
@@ -69,6 +89,14 @@ class DCFModalComponent: NSObject, DCFComponent {
         
         modalViewController.view = modalView
         
+        // Store weak reference to container view for delegate callbacks
+        objc_setAssociatedObject(
+            modalViewController,
+            UnsafeRawPointer(bitPattern: "containerView".hashValue)!,
+            view,
+            .OBJC_ASSOCIATION_ASSIGN // Use ASSIGN to avoid retain cycle
+        )
+        
         // Configure presentation style
         if let presentationStyle = props["presentationStyle"] as? String {
             switch presentationStyle {
@@ -117,8 +145,11 @@ class DCFModalComponent: NSObject, DCFComponent {
             }
             
             presentingController.present(modalViewController, animated: true) {
-                // Trigger onShow event using proper event system
-                self.triggerEventIfRegistered(view: view, eventType: "onShow", eventData: [:])
+                // Set up presentation controller delegate after presentation
+                modalViewController.presentationController?.delegate = DCFModalComponent.sharedInstance
+                
+                // Trigger onShow event using same pattern as TouchableOpacity
+                self.triggerEvent(view: view, eventType: "onShow", eventData: [:])
             }
         }
     }
@@ -138,8 +169,8 @@ class DCFModalComponent: NSObject, DCFComponent {
             // Clean up reference
             DCFModalComponent.activeModals.removeValue(forKey: view)
             
-            // Trigger onDismiss event using proper event system
-            self.triggerEventIfRegistered(view: view, eventType: "onDismiss", eventData: [:])
+            // Trigger onDismiss event using same pattern as TouchableOpacity
+            self.triggerEvent(view: view, eventType: "onDismiss", eventData: [:])
         }
     }
     
@@ -173,20 +204,21 @@ class DCFModalComponent: NSObject, DCFComponent {
         print("📱 Moved \(children.count) children back to container view (stays hidden)")
     }
     
-    // Trigger event if the view has been registered for that event type
-    private func triggerEventIfRegistered(view: UIView, eventType: String, eventData: [String: Any]) {
-        guard let eventTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String],
-              let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void,
-              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String else {
-            print("📱 Modal event not registered - no handlers found for \(eventType)")
-            return
-        }
-        
-        if eventTypes.contains(eventType) {
-            print("✅ Triggering modal event: \(eventType)")
-            callback(viewId, eventType, eventData)
+    // Trigger event using the same pattern as TouchableOpacity - directly call callback
+    private func triggerEvent(view: UIView, eventType: String, eventData: [String: Any]) {
+        // Try to get callback using the registered event data
+        if let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void,
+           let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String,
+           let eventTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String] {
+            
+            if eventTypes.contains(eventType) {
+                print("✅ Triggering modal event: \(eventType) for view \(viewId)")
+                callback(viewId, eventType, eventData)
+            } else {
+                print("📱 Modal event \(eventType) not in registered types: \(eventTypes)")
+            }
         } else {
-            print("📱 Modal event \(eventType) not in registered types: \(eventTypes)")
+            print("📱 Modal event not registered - no handlers found for \(eventType)")
         }
     }
     
@@ -238,6 +270,48 @@ class DCFModalComponent: NSObject, DCFComponent {
                 objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, remainingTypes, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
                 print("🔄 Updated modal event types for view \(viewId): \(remainingTypes)")
             }
+        }
+    }
+}
+
+// MARK: - UIAdaptivePresentationControllerDelegate
+
+extension DCFModalComponent {
+    
+    // Called when user tries to dismiss modal with gesture (like swipe down)
+    func presentationControllerShouldDismiss(_ presentationController: UIPresentationController) -> Bool {
+        // Get the container view from the modal view controller
+        if let containerView = objc_getAssociatedObject(
+            presentationController.presentedViewController,
+            UnsafeRawPointer(bitPattern: "containerView".hashValue)!
+        ) as? UIView {
+            
+            // Trigger onRequestClose event
+            triggerEvent(view: containerView, eventType: "onRequestClose", eventData: [:])
+        }
+        
+        // Return false to prevent automatic dismissal - let Dart handle it
+        return false
+    }
+    
+    // Called if the modal is actually dismissed (programmatically or system override)
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        // Get the container view from the modal view controller
+        if let containerView = objc_getAssociatedObject(
+            presentationController.presentedViewController,
+            UnsafeRawPointer(bitPattern: "containerView".hashValue)!
+        ) as? UIView {
+            
+            // Clean up modal reference
+            DCFModalComponent.activeModals.removeValue(forKey: containerView)
+            
+            // Move children back to container
+            if let modalView = presentationController.presentedViewController.view {
+                moveChildrenBackToContainer(from: modalView, to: containerView)
+            }
+            
+            // Trigger onDismiss event
+            triggerEvent(view: containerView, eventType: "onDismiss", eventData: [:])
         }
     }
 }
