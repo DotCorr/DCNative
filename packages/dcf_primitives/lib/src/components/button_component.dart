@@ -54,7 +54,7 @@ class DCFButton extends StatelessComponent {
   DCFButton({
     required this.buttonProps,
        this.layout = const LayoutProps(
-      flex: 1
+    height: 50,width: 200
     ),
     this.style = const StyleSheet(),
     this.onPress,

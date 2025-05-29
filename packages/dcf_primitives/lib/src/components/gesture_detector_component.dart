@@ -44,7 +44,7 @@ class DCFGestureDetector extends StatelessComponent {
   /// Create a gesture detector component
   DCFGestureDetector({
     required this.children,
-    this.layout = const LayoutProps(padding: 8),
+    this.layout = const LayoutProps(padding: 8, height: 50,width: 200),
     this.style = const StyleSheet(),
     this.onTap,
     this.onLongPress,

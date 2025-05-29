@@ -51,7 +51,7 @@ class DCFSVG extends StatelessComponent {
   DCFSVG({
     required this.svgProps,
        this.layout = const LayoutProps(
-      flex: 1
+     height: 20,width: 20
     ),
     this.style = const StyleSheet(),
     this.events,

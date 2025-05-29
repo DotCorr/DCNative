@@ -30,7 +30,7 @@ class DCFAnimatedText extends StatelessComponent {
     required this.animation,
     this.textProps = const TextProps(),
        this.layout = const LayoutProps(
-      flex: 1
+      height: 50,width: 200
     ),
     this.style = const StyleSheet(),
     this.onAnimationEnd,

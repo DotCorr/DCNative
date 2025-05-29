@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:dcf_primitives/dcf_primitives.dart';
 import 'package:dcflight/dcflight.dart';
 
@@ -5,66 +7,65 @@ class ExampleApp extends StatefulComponent {
   @override
   DCFComponentNode render() {
     final infoModal = useState(false);
-    return DCFScrollView(
+    final alert = useState(false);
+
+    useEffect(() {
+      // This effect runs once when the component is mounted
+      Timer(Duration(seconds: 2), () {
+        // After 2 seconds, we can show the alert
+        infoModal.setValue(!infoModal.value);
+        print("ExampleApp mounted and alert set to true");
+      });
+      return () {
+        // This cleanup function runs when the component is unmounted
+        print("ExampleApp unmounted");
+      };
+    }, dependencies: []);
+
+    return DCFView(
       layout: LayoutProps(
         flex: 1,
-        alignItems: YogaAlign.center,
+        flexDirection: YogaFlexDirection.column,
         justifyContent: YogaJustifyContent.flexStart,
+        alignItems: YogaAlign.stretch,
+        padding: 50
       ),
-      style: StyleSheet(backgroundColor: Colors.amber),
       children: [
-        DCFText(
-          content: "Hello, DCF Go!",
-          textProps: TextProps(
-            fontSize: 24,
-            fontWeight: 'bold',
-            color: Colors.black,
-          ),
-        ),
-
-        DCFButton(
-          layout: LayoutProps(height: 50, width: 200),
-          onPress: (context) {
-            // Handle button press
-            infoModal.setValue(true);
-            print("Button pressed!");
-          },
-          buttonProps: ButtonProps(title: "Show more info Modal"),
-        ),
-        DCFModal(
+      
+       DCFModal(
           visible: infoModal.value,
           statusBarTranslucent: true,
           onDismiss: () {
-            infoModal.setValue(false);
+            infoModal.setValue(!infoModal.value);
+             print("dismissed modal");
+           
+            alert.setValue(true);
           },
-          children: [
-            DCFView(
-              layout: LayoutProps(
-                height: 200,
-                width: "90%",
-                justifyContent: YogaJustifyContent.center,
-                alignItems: YogaAlign.center,
-              ),
-              style: StyleSheet(
-                backgroundColor: Colors.white,
-                borderRadius: 10,
-              ),
-              children: [
-                DCFText(
-                  content: "This is a modal!",
-                  textProps: TextProps(fontSize: 18, fontWeight: 'bold'),
-                ),
-                DCFButton(
-                  buttonProps: ButtonProps(title: "Close"),
-                  onPress: (context) {
-                    infoModal.setValue(false);
-                  },
-                ),
-              ],
-            ),
-          ],
+         
         ),
-      ],
+
+        DCFTextInput(
+        style: StyleSheet(backgroundColor: Colors.pink),
+          value: "Search",
+          onChangeText: (v) {
+            print("Text input changed: $v");
+          },
+        ),
+        DCFButton(
+          buttonProps: ButtonProps(title: "Show Alert"),
+          onPress: (v) {
+            alert.setValue(!alert.value);
+            print("Alert button pressed, alert set to ${alert.value}");
+          },
+        ),
+         DCFButton(
+          buttonProps: ButtonProps(title: "Show Modal"),
+          onPress: (v) {
+            alert.setValue(!infoModal.value);
+            print("Modal button pressed, alert set to ${alert.value}");
+          },
+        ),
+        ],
     );
   }
 }

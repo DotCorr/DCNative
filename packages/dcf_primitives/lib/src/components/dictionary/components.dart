@@ -23,6 +23,3 @@ export '../flat_list_component.dart';
 // Export type definitions
 export '../../types/component_types.dart';
 
-//! Quick advise for contributors before you export a new component, verify this:
-//  Components that are leaf nodes (like buttons, text, etc.(in case you are a novice, a leaf node does not take children, the chain ends there)) should have a flex of 1 by defaut if not leave the layoutProps empty.
-// ? Also unless you have a purpose, non-leaf nodes can have a padding of 8 by default just to maintain the expectation of developers.

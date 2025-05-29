@@ -39,7 +39,7 @@ class DCFTouchableOpacity extends StatelessComponent {
   DCFTouchableOpacity({
     required this.children,
     this.activeOpacity = 0.2,
-    this.layout = const LayoutProps(padding: 8),
+    this.layout = const LayoutProps(padding: 8, height: 50,width: 200),
     this.style = const StyleSheet(),
     this.onPress,
     this.onPressIn,

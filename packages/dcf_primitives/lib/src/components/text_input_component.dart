@@ -4,6 +4,8 @@ import '../types/component_types.dart' as types;
 /// DCFTextInput - Cross-platform text input component
 /// Provides native text input functionality with comprehensive type safety
 class DCFTextInput extends StatelessComponent {
+  final LayoutProps? layout;
+  final StyleSheet? style;
   final String? value;
   final String? defaultValue;
   final String? placeholder;
@@ -41,9 +43,11 @@ class DCFTextInput extends StatelessComponent {
   final void Function()? onKeyPress;
   final void Function()? onSelectionChange;
   final void Function()? onEndEditing;
-
+  
   DCFTextInput({
     super.key,
+    this.style,
+    this.layout = const LayoutProps( height: 50,width: 200),
     this.value,
     this.defaultValue,
     this.placeholder,
@@ -128,6 +132,8 @@ class DCFTextInput extends StatelessComponent {
         'fontSize': fontSize,
         'fontWeight': fontWeight,
         'fontFamily': fontFamily,
+        ...layout?.toMap() ?? {},
+        ...style?.toMap() ?? {},
         ...events,
       },
       children: [],
