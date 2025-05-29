@@ -785,15 +785,18 @@ class VDom {
       List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
     // Create map of old children by key for O(1) lookup
     final oldChildrenMap = <String?, DCFComponentNode>{};
+    final oldChildOrderByKey = <String?, int>{};
     for (int i = 0; i < oldChildren.length; i++) {
       final oldChild = oldChildren[i];
       final key = oldChild.key ?? i.toString(); // Use index for null keys
       oldChildrenMap[key] = oldChild;
+      oldChildOrderByKey[key] = i;
     }
     
     // Track children that need to be in final list
     final updatedChildIds = <String>[];
     final processedOldChildren = <DCFComponentNode>{};
+    bool hasStructuralChanges = false;
     
     // Process each new child
     for (int i = 0; i < newChildren.length; i++) {
@@ -813,12 +816,18 @@ class VDom {
         // Get the view ID (which might come from different sources)
         childViewId = oldChild.effectiveNativeViewId;
         
-        // Update position if needed
-        if (childViewId != null) {
-          await _moveChild(childViewId, parentViewId, i);
+        // Check if the position changed (reordering)
+        final oldIndex = oldChildOrderByKey[key];
+        if (oldIndex != null && oldIndex != i) {
+          hasStructuralChanges = true;
+          // Update position if needed
+          if (childViewId != null) {
+            await _moveChild(childViewId, parentViewId, i);
+          }
         }
       } else {
-        // Create new child
+        // Create new child - this is a structural change
+        hasStructuralChanges = true;
         childViewId = await renderToNative(newChild, parentViewId: parentViewId, index: i);
       }
       
@@ -831,6 +840,7 @@ class VDom {
     // Remove old children that aren't in the new list
     for (var oldChild in oldChildren) {
       if (!processedOldChildren.contains(oldChild)) {
+        hasStructuralChanges = true; // Removal is a structural change
         final viewId = oldChild.effectiveNativeViewId;
         if (viewId != null) {
           await _nativeBridge.deleteView(viewId);
@@ -839,8 +849,11 @@ class VDom {
       }
     }
     
-    // Ensure children are in correct order
-    if (updatedChildIds.isNotEmpty) {
+    // Only call setChildren if there were structural changes (additions, removals, or reorders)
+    if (hasStructuralChanges && updatedChildIds.isNotEmpty) {
+      if (kDebugMode) {
+        print('🔄 Calling setChildren due to structural changes in keyed reconciliation');
+      }
       await _nativeBridge.setChildren(parentViewId, updatedChildIds);
     }
   }
@@ -850,6 +863,7 @@ class VDom {
       List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
     final updatedChildIds = <String>[];
     final commonLength = math.min(oldChildren.length, newChildren.length);
+    bool hasStructuralChanges = false;
     
     // Update common children
     for (int i = 0; i < commonLength; i++) {
@@ -868,7 +882,8 @@ class VDom {
     
     // Handle length differences
     if (newChildren.length > oldChildren.length) {
-      // Add any extra new children
+      // Add any extra new children - this is a structural change
+      hasStructuralChanges = true;
       for (int i = commonLength; i < newChildren.length; i++) {
         final childViewId = await renderToNative(
           newChildren[i], 
@@ -881,7 +896,8 @@ class VDom {
         }
       }
     } else if (oldChildren.length > newChildren.length) {
-      // Remove any extra old children
+      // Remove any extra old children - this is a structural change
+      hasStructuralChanges = true;
       for (int i = commonLength; i < oldChildren.length; i++) {
         final viewId = oldChildren[i].effectiveNativeViewId;
         if (viewId != null) {
@@ -891,8 +907,11 @@ class VDom {
       }
     }
     
-    // Ensure children are in correct order
-    if (updatedChildIds.isNotEmpty) {
+    // Only call setChildren if there were structural changes (additions or removals)
+    if (hasStructuralChanges && updatedChildIds.isNotEmpty) {
+      if (kDebugMode) {
+        print('🔄 Calling setChildren due to structural changes in simple reconciliation');
+      }
       await _nativeBridge.setChildren(parentViewId, updatedChildIds);
     }
   }
