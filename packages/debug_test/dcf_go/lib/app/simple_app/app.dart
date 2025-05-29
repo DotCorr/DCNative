@@ -8,7 +8,7 @@ class SimpleApp extends StatefulComponent{
     final modal = useState(false);
     final textVal = useState("text");
     return DCFView(
-      layout: LayoutProps(flex: 1),
+      layout: LayoutProps(flex: 1,padding: 100),
       children: [
        
        
@@ -40,6 +40,7 @@ class SimpleApp extends StatefulComponent{
                 layout: LayoutProps(
                   width: "100%",
                   height: "100%",
+                  padding: 100,
                   justifyContent: YogaJustifyContent.center,
                   alignItems: YogaAlign.center,
                 ),
