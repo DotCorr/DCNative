@@ -18,6 +18,7 @@ class SimpleApp extends StatefulComponent{
 
             DCFTextInput(
               value: textVal.value,
+              onFocus: () => print("focused ${textVal.value}"),
               onBlur: () => print("blurred ${textVal.value}"),
               onChangeText: (v) {
                 textVal.setValue(v);
@@ -53,7 +54,7 @@ class SimpleApp extends StatefulComponent{
                 print("🔥 MODAL SHOW CALLBACK CALLED!");
               },
               onRequestClose: () {
-                print("🔥 MODAL REQUEST CLOSE CALLBACK CALLED!");
+                print("🔥 MODAL REQUEST CLOSE CALLBACK CALLED but for onRequestClose!");
                 modal.setValue(false);
               },
               children: [
@@ -74,11 +75,13 @@ class SimpleApp extends StatefulComponent{
                 ),
                 children: [
                   DCFTextInput(
+                    style: StyleSheet(borderColor: Colors.transparent,borderWidth: 0,backgroundColor: Colors.pink),
                     value: textVal.value,
-                    onBlur: () => print("blurred ${textVal.value}"),
+                    onFocus: () => print("modal textinput focused ${textVal.value}"),
+                    onBlur: () => print("modal textinput blurred ${textVal.value}"),
                     onChangeText: (v) {
                       textVal.setValue(v);
-                      print("changed $v");
+                      print("modal textinput changed $v");
                     },
                   ),
                   DCFText(content: "This is a modal"),

@@ -134,6 +134,10 @@ class VDom {
     try {
       if (handler is Function(Map<String, dynamic>)) {
         handler(eventData);
+      } else if (handler is Function(String)) {
+        // Handle TextInput onChangeText events that expect a string parameter
+        final text = eventData['text'] as String? ?? '';
+        handler(text);
       } else if (handler is Function()) {
         handler();
       } else {

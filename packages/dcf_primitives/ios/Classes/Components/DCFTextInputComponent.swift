@@ -3,7 +3,6 @@ import dcflight
 
 class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UITextViewDelegate {
     private static let sharedInstance = DCFTextInputComponent()
-    private static var textInputEventHandlers = [UIView: (String, [String], (String, String, [String: Any]) -> Void)]()
     
     required override init() {
         super.init()
@@ -16,16 +15,16 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         if isMultiline {
             let textView = UITextView()
             textView.font = UIFont.systemFont(ofSize: 16)
-            textView.layer.borderWidth = 1.0
-            textView.layer.borderColor = UIColor.systemGray4.cgColor
-            textView.layer.cornerRadius = 8.0
+            // Remove default styling - let StyleSheet handle it
+            textView.backgroundColor = UIColor.clear
             textView.textContainerInset = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
             textView.delegate = DCFTextInputComponent.sharedInstance
             inputView = textView
         } else {
             let textField = UITextField()
             textField.font = UIFont.systemFont(ofSize: 16)
-            textField.borderStyle = .roundedRect
+            // Remove default border style - let StyleSheet handle it
+            textField.borderStyle = .none
             textField.delegate = DCFTextInputComponent.sharedInstance
             inputView = textField
         }
@@ -226,21 +225,21 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         let currentText = textField.text ?? ""
         let newText = (currentText as NSString).replacingCharacters(in: range, with: string)
         
-        triggerEventIfRegistered(textField, eventType: "onChangeText", eventData: ["text": newText])
+        triggerEvent(textField, eventType: "onChangeText", eventData: ["text": newText])
         
         return true
     }
     
     func textFieldDidBeginEditing(_ textField: UITextField) {
-        triggerEventIfRegistered(textField, eventType: "onFocus", eventData: [:])
+        triggerEvent(textField, eventType: "onFocus", eventData: [:])
     }
     
     func textFieldDidEndEditing(_ textField: UITextField) {
-        triggerEventIfRegistered(textField, eventType: "onBlur", eventData: [:])
+        triggerEvent(textField, eventType: "onBlur", eventData: [:])
     }
     
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        triggerEventIfRegistered(textField, eventType: "onSubmitEditing", eventData: ["text": textField.text ?? ""])
+        triggerEvent(textField, eventType: "onSubmitEditing", eventData: ["text": textField.text ?? ""])
         return true
     }
     
@@ -251,17 +250,17 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         let currentText = textView.text ?? ""
         let newText = (currentText as NSString).replacingCharacters(in: range, with: text)
         
-        triggerEventIfRegistered(textView, eventType: "onChangeText", eventData: ["text": newText])
+        triggerEvent(textView, eventType: "onChangeText", eventData: ["text": newText])
         
         return true
     }
     
     func textViewDidBeginEditing(_ textView: UITextView) {
-        triggerEventIfRegistered(textView, eventType: "onFocus", eventData: [:])
+        triggerEvent(textView, eventType: "onFocus", eventData: [:])
     }
     
     func textViewDidEndEditing(_ textView: UITextView) {
-        triggerEventIfRegistered(textView, eventType: "onBlur", eventData: [:])
+        triggerEvent(textView, eventType: "onBlur", eventData: [:])
     }
     
     // MARK: - Event Handling Implementation
@@ -270,66 +269,43 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
                           eventCallback: @escaping (String, String, [String: Any]) -> Void) {
         print("📝 Adding TextInput event listeners to view \(viewId): \(eventTypes)")
         
-        // Store event registration info
-        DCFTextInputComponent.textInputEventHandlers[view] = (viewId, eventTypes, eventCallback)
+        // Store individual callbacks for each event type using associated objects
+        for eventType in eventTypes {
+            let key = "textinput_callback_\(eventType)"
+            objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, eventCallback, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
         
-        // Also store using associated objects as backup
-        objc_setAssociatedObject(view, 
-                               UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, 
-                               eventCallback, 
-                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        // Store view ID for reference
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "textinput_viewId".hashValue)!, viewId, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
-        objc_setAssociatedObject(view, 
-                               UnsafeRawPointer(bitPattern: "viewId".hashValue)!, 
-                               viewId, 
-                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        
-        objc_setAssociatedObject(view, 
-                               UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
-                               eventTypes,
-                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        
-        print("✅ Successfully registered TextInput event handlers for view \(viewId)")
+        print("✅ Successfully registered TextInput event handlers for view \(viewId): \(eventTypes)")
     }
     
     func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
         print("📝 Removing TextInput event listeners from view \(viewId): \(eventTypes)")
         
-        // Remove from handlers dictionary
-        DCFTextInputComponent.textInputEventHandlers.removeValue(forKey: view)
+        // Remove individual callbacks
+        for eventType in eventTypes {
+            let key = "textinput_callback_\(eventType)"
+            objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
         
-        // Clean up associated objects
-        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        // Remove view ID
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "textinput_viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
         print("✅ Removed TextInput event handlers for view \(viewId)")
     }
     
-    // Trigger event if the view has been registered for that event type
-    private func triggerEventIfRegistered(_ view: UIView, eventType: String, eventData: [String: Any]) {
-        // Try handlers dictionary first
-        if let (viewId, eventTypes, callback) = DCFTextInputComponent.textInputEventHandlers[view] {
-            if eventTypes.contains(eventType) {
-                print("✅ Triggering TextInput event: \(eventType) for view \(viewId)")
-                callback(viewId, eventType, eventData)
-                return
-            }
-        }
-        
-        // Fallback to associated objects
-        guard let eventTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String],
-              let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void,
-              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String else {
-            print("📝 TextInput event not registered - no handlers found for \(eventType)")
+    // Trigger event using direct callback pattern (same as TouchableOpacity and fixed Modal)
+    private func triggerEvent(_ view: UIView, eventType: String, eventData: [String: Any]) {
+        let key = "textinput_callback_\(eventType)"
+        guard let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!) as? (String, String, [String: Any]) -> Void,
+              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "textinput_viewId".hashValue)!) as? String else {
+            print("📝 TextInput event \(eventType) not registered - no callback found")
             return
         }
         
-        if eventTypes.contains(eventType) {
-            print("✅ Triggering TextInput event (fallback): \(eventType) for view \(viewId)")
-            callback(viewId, eventType, eventData)
-        } else {
-            print("📝 TextInput event \(eventType) not in registered types: \(eventTypes)")
-        }
+        print("✅ Triggering TextInput event: \(eventType) for view \(viewId)")
+        callback(viewId, eventType, eventData)
     }
 }
