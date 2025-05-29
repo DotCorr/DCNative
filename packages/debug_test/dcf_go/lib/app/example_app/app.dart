@@ -15,7 +15,7 @@ class ExampleApp extends StatefulComponent {
     useEffect(() {
       // This effect runs once when the component is mounted
       
-        // infoModal.setValue(!infoModal.value);
+        infoModal.setValue(true);
         
    
       return () {
@@ -60,7 +60,7 @@ class ExampleApp extends StatefulComponent {
           ],
           statusBarTranslucent: true,
           onDismiss: () {
-            infoModal.setValue(!infoModal.value);
+       
             print("dismissed modal");
 
             alert.setValue(true);
@@ -70,6 +70,7 @@ class ExampleApp extends StatefulComponent {
         DCFTextInput(
           style: StyleSheet(backgroundColor: Colors.pink),
           value: "Search",
+          textColor: Colors.green,
           onChangeText: (v) {
             print("Text input changed: $v");
           },
@@ -84,7 +85,7 @@ class ExampleApp extends StatefulComponent {
         DCFButton(
           buttonProps: ButtonProps(title: "Show Modal"),
           onPress: (v) {
-            alert.setValue(!infoModal.value);
+           infoModal.setValue(true);
             print("Modal button pressed, alert set to ${alert.value}");
           },
         ),
@@ -101,7 +102,7 @@ class ExampleApp extends StatefulComponent {
         DCFButton(
           buttonProps: ButtonProps(title: "Show Conntext Menu"),
           onPress: (v) {
-            contextMenu.setValue(!infoModal.value);
+            // contextMenu.setValue(!infoModal.value);
           },
         ),
       ],

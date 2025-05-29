@@ -10,11 +10,20 @@ class DCFModalComponent: NSObject, DCFComponent {
     }
     
     func createView(props: [String: Any]) -> UIView {
-        // Modal container view - this will hold the children when not visible
+        // Modal container view - this should NEVER be visible or participate in layout
         let containerView = UIView()
         containerView.backgroundColor = UIColor.clear
-        containerView.isHidden = true  // Hide container so children are NEVER visible in main UI
+        containerView.isHidden = true  // Always hidden
         containerView.clipsToBounds = true
+        containerView.alpha = 0  // Extra insurance it's not visible
+        
+        // CRITICAL: Make container view have zero size so it doesn't participate in layout
+        containerView.frame = CGRect.zero
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add size constraints to keep it at zero size
+        containerView.widthAnchor.constraint(equalToConstant: 0).isActive = true
+        containerView.heightAnchor.constraint(equalToConstant: 0).isActive = true
         
         // Apply initial properties
         updateView(containerView, withProps: props)
@@ -30,6 +39,11 @@ class DCFModalComponent: NSObject, DCFComponent {
         } else {
             dismissModal(for: view)
         }
+        
+        // Ensure container always stays hidden and at zero size
+        view.isHidden = true
+        view.alpha = 0
+        view.frame = CGRect.zero
         
         return true
     }
@@ -115,8 +129,10 @@ class DCFModalComponent: NSObject, DCFComponent {
         // Hide modal children and ensure container stays hidden
         hideModalChildren(from: modalView)
         
-        // Ensure container view is hidden again
+        // Ensure container view stays hidden and at zero size
         view.isHidden = true
+        view.alpha = 0
+        view.frame = CGRect.zero
         
         modalViewController.dismiss(animated: true) {
             // Clean up reference
@@ -135,10 +151,10 @@ class DCFModalComponent: NSObject, DCFComponent {
             modalView.addSubview(child)
         }
         
-        // Make the container visible now that children are moved to modal
-        containerView.isHidden = false
+        // Container must stay hidden - children are now safely in modal
+        // containerView.isHidden = false  // REMOVED: This was causing children to appear in main UI
         
-        print("📱 Moved \(children.count) children to modal view")
+        print("📱 Moved \(children.count) children to modal view - container stays hidden")
     }
     
     // Hide modal children and ensure container stays hidden
@@ -170,25 +186,25 @@ class DCFModalComponent: NSObject, DCFComponent {
     
     // MARK: - Event Handling Implementation
     
-    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
-                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
+    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String],
+                           eventCallback: @escaping (String, String, [String: Any]) -> Void) {
         print("📱 Adding modal event listeners to view \(viewId): \(eventTypes)")
         
         // Store the event callback and view ID using associated objects
-        objc_setAssociatedObject(view, 
-                               UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, 
-                               eventCallback, 
-                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view,
+                                 UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!,
+                                 eventCallback,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
-        objc_setAssociatedObject(view, 
-                               UnsafeRawPointer(bitPattern: "viewId".hashValue)!, 
-                               viewId, 
-                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view,
+                                 UnsafeRawPointer(bitPattern: "viewId".hashValue)!,
+                                 viewId,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
-        objc_setAssociatedObject(view, 
-                               UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
-                               eventTypes,
-                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        objc_setAssociatedObject(view,
+                                 UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
+                                 eventTypes,
+                                 .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
         print("✅ Successfully registered modal event handlers for view \(viewId)")
     }
@@ -217,5 +233,32 @@ class DCFModalComponent: NSObject, DCFComponent {
                 print("🔄 Updated modal event types for view \(viewId): \(remainingTypes)")
             }
         }
+    }
+    
+    // MARK: - Layout Override
+    
+    // Override layout to prevent modal container from participating in layout
+    func applyLayout(_ view: UIView, layout: YGNodeLayout) {
+        // Modal container should NEVER have layout applied
+        // Keep it at zero size and hidden always
+        view.frame = CGRect.zero
+        view.isHidden = true
+        view.alpha = 0
+        print("📱 Modal container layout blocked - staying at zero size")
+    }
+    
+    // Override intrinsic size to return zero
+    func getIntrinsicSize(_ view: UIView, forProps props: [String: Any]) -> CGSize {
+        // Modal container should never contribute to layout calculations
+        return CGSize.zero
+    }
+    
+    // Override view registration to prevent layout system interference
+    func viewRegisteredWithShadowTree(_ view: UIView, nodeId: String) {
+        // Ensure the view stays hidden and at zero size even when registered with layout system
+        view.isHidden = true
+        view.alpha = 0
+        view.frame = CGRect.zero
+        print("📱 Modal container registered with shadow tree but forced to zero size")
     }
 }

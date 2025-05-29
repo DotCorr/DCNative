@@ -32,7 +32,7 @@ class DCFTextInput extends StatelessComponent {
   final String? selectionColor;
   final bool spellCheck;
   final String? textAlign;
-  final String? textColor;
+  final Color? textColor;
   final String? fontSize;
   final String? fontWeight;
   final String? fontFamily;
