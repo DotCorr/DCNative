@@ -92,14 +92,7 @@ class ExampleApp extends StatefulComponent {
         
         ),
         
-       if(contextMenu.value)
-        DCFContextMenu(
-          children: [
-         DCFText(content: "Context Menu Item 1"),
-         DCFText(content: "Context Menu Item 2"),
-         DCFText(content: "Context Menu Item 3"),
-          ]
-        ),
+
         DCFButton(
           buttonProps: ButtonProps(title: "Show Conntext Menu"),
           onPress: (v) {
