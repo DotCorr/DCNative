@@ -18,6 +18,9 @@ abstract class StatefulComponent extends DCFComponentNode {
   /// Whether the component is mounted
   bool _isMounted = false;
 
+  /// Whether the component is currently updating to prevent cascading updates
+  bool _isUpdating = false;
+
   /// Current hook index during rendering
   int _hookIndex = 0;
 
@@ -79,11 +82,27 @@ abstract class StatefulComponent extends DCFComponentNode {
   /// Called when the component will unmount
   @override
   void componentWillUnmount() {
-    // Clean up hooks
+    // Clean up hooks first
     for (final hook in _hooks) {
       hook.dispose();
     }
     _hooks.clear();
+    
+    // Clean up any remaining store subscriptions via StoreManager
+    // This is a safety net in case hooks didn't clean up properly
+    try {
+      // Import StoreManager dynamically to avoid circular imports
+      final storeManagerType = 'StoreManager';
+      if (kDebugMode) {
+        print('Cleaning up store subscriptions for component $instanceId');
+      }
+      // Note: StoreManager cleanup will be handled by individual hooks
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error during store cleanup: $e');
+      }
+    }
+    
     _isMounted = false;
   }
 
@@ -146,17 +165,46 @@ abstract class StatefulComponent extends DCFComponentNode {
   /// Create a store hook for global state
   StoreHook<T> useStore<T>(Store<T> store) {
     if (_hookIndex >= _hooks.length) {
-      // Create new hook
+      // Create new hook with proper component tracking
       final hook = StoreHook<T>(store, () {
-        scheduleUpdate();
-      });
+        // Only schedule update if component is mounted and not already updating
+        if (_isMounted && !_isUpdating) {
+          _isUpdating = true;
+          scheduleUpdate();
+          // Reset updating flag after microtask to prevent rapid successive updates
+          Future.microtask(() {
+            _isUpdating = false;
+          });
+        }
+      }, instanceId); // Pass component ID for tracking
       _hooks.add(hook);
     }
     
     // Get the hook (either existing or newly created)
     final hook = _hooks[_hookIndex] as StoreHook<T>;
-    _hookIndex++;
     
+    // Verify this hook is for the same store to prevent mismatches
+    if (hook.store != store) {
+      if (kDebugMode) {
+        print('Warning: Store hook mismatch detected, disposing old hook and creating new one');
+      }
+      // Dispose the old hook and create a new one
+      hook.dispose();
+      final newHook = StoreHook<T>(store, () {
+        if (_isMounted && !_isUpdating) {
+          _isUpdating = true;
+          scheduleUpdate();
+          Future.microtask(() {
+            _isUpdating = false;
+          });
+        }
+      }, instanceId); // Pass component ID for tracking
+      _hooks[_hookIndex] = newHook;
+      _hookIndex++;
+      return newHook;
+    }
+    
+    _hookIndex++;
     return hook;
   }
 

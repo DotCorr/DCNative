@@ -11,26 +11,29 @@ import 'package:dcflight/dcflight.dart';
 class SimpleApp extends StatefulComponent {
   @override
   DCFComponentNode render() {
-
+    // Use hooks for store access
+    final textVal = useStore(textValStore);
+    final bg = useStore(bgStore);
+    final modal = useStore(modalStore);
 
     return DCFView(
-      style: StyleSheet(backgroundColor: bgStore.state),
+      style: StyleSheet(backgroundColor: bg.state),
       layout: LayoutProps(flex: 1, padding: 100),
       children: [
         DCFTextInput(
-          value: textValStore.state,
+          value: textVal.state,
           textColor: Colors.teal,
-          onFocus: () => print("focused ${textValStore.state}"),
-          onBlur: () => print("blurred ${textValStore.state}"),
+          onFocus: () => print("focused ${textVal.state}"),
+          onBlur: () => print("blurred ${textVal.state}"),
           onChangeText: (v) {
-            textValStore.setState(v);
+            textVal.setState(v);
             print("changed $v");
           },
         ),
         DCFButton(
           buttonProps: ButtonProps(title: "Reset Color"),
           onPress: (v) {
-            bgStore.setState(Colors.white);
+            bg.setState(Colors.white);
           },
         ),
         DCFButton(
@@ -42,7 +45,7 @@ class SimpleApp extends StatefulComponent {
         DCFButton(
           buttonProps: ButtonProps(title: "Open modalStore"),
           onPress: (v) {
-            modalStore.setState(true);
+            modal.setState(true);
           },
         ),
         // Triggerbles

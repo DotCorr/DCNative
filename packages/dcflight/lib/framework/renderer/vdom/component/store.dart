@@ -37,12 +37,21 @@ class Store<T> {
 
   /// Register a listener
   void subscribe(void Function(T) listener) {
-    _listeners.add(listener);
+    // Prevent duplicate listeners for the same function
+    if (!_listeners.contains(listener)) {
+      _listeners.add(listener);
+      developer.log('Store listener added. Total listeners: ${_listeners.length}', name: 'Store');
+    } else {
+      developer.log('Duplicate listener prevented', name: 'Store');
+    }
   }
 
   /// Unregister a listener
   void unsubscribe(void Function(T) listener) {
-    _listeners.remove(listener);
+    final removed = _listeners.remove(listener);
+    if (removed) {
+      developer.log('Store listener removed. Total listeners: ${_listeners.length}', name: 'Store');
+    }
   }
 
   /// Notify all listeners of state change

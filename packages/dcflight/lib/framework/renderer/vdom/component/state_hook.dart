@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'store.dart';
+import 'store_manager.dart';
 
 /// Base hook class for all hook types
 abstract class Hook {
@@ -145,26 +146,35 @@ class RefHook<T> extends Hook {
   }
 }
 
-/// Store hook for connecting to global state
+/// Store hook for connecting to global state with proper lifecycle management
 class StoreHook<T> extends Hook {
   /// The store
   final Store<T> _store;
   
-  /// State change callback
-  final Function() _onChange;
+  /// Get the store (for hook validation)
+  Store<T> get store => _store;
   
-  /// Listener function reference for unsubscribing
-  late final void Function(T) _listener;
+  /// Component ID for tracking subscriptions
+  final String _componentId;
+  
+  /// Whether we're managed by StoreManager
+  bool _isManagedByStoreManager = false;
 
-  /// Create a store hook
-  StoreHook(this._store, this._onChange) {
-    // Create listener function that triggers component update
-    _listener = (T _) {
-      _onChange();
-    };
-    
-    // Subscribe to store changes
-    _store.subscribe(_listener);
+  /// Create a store hook with proper lifecycle management
+  StoreHook(this._store, Function() onChange, this._componentId) {
+    // Use StoreManager for centralized subscription management
+    if (!StoreManager.instance.isComponentSubscribed(_componentId, _store)) {
+      StoreManager.instance.subscribeComponent(_componentId, _store, onChange);
+      _isManagedByStoreManager = true;
+      
+      if (kDebugMode) {
+        developer.log('StoreHook created and managed for component $_componentId', name: 'StoreHook');
+      }
+    } else {
+      if (kDebugMode) {
+        developer.log('Component $_componentId already subscribed to store - reusing subscription', name: 'StoreHook');
+      }
+    }
   }
 
   /// Get current state
@@ -182,7 +192,14 @@ class StoreHook<T> extends Hook {
 
   @override
   void dispose() {
-    // Unsubscribe from store on disposal
-    _store.unsubscribe(_listener);
+    // Only unsubscribe if we're the managing hook
+    if (_isManagedByStoreManager) {
+      StoreManager.instance.unsubscribeComponentFromStore(_componentId, _store);
+      _isManagedByStoreManager = false;
+      
+      if (kDebugMode) {
+        developer.log('StoreHook disposed for component $_componentId', name: 'StoreHook');
+      }
+    }
   }
 }

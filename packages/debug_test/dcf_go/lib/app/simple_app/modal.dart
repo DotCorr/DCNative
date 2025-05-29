@@ -3,12 +3,15 @@ import 'package:dcf_primitives/dcf_primitives.dart';
 import 'package:dcflight/dcflight.dart';
 import 'package:flutter/material.dart';
 
-class SampleModal extends StatelessComponent {
+class SampleModal extends StatefulComponent {
  
   @override
-  render() { 
+  render() {
+    // Use the useStore hook instead of direct access
+    final modalStoreHook = useStore(modalStore);
+    
     return DCFModal(
-      visible: modalStore.state,
+      visible: modalStoreHook.state,
       statusBarTranslucent: false,
       presentationStyle: ModalPresentationStyle.popover,
       borderRadius: 100,
@@ -34,17 +37,17 @@ class SampleModal extends StatelessComponent {
       },
       onLeftButtonPress: () {
         print("🔘 Left button pressed - closing modalStore");
-        modalStore.setState(false);
+        modalStoreHook.setState(false);
       },
       onRightButtonPress: () {
         print("✅ Right button pressed - saving data");
         // You could save data here, then close
-        modalStore.setState(false);
+        modalStoreHook.setState(false);
       },
 
       onDismiss: () {
         print("🔥 modalStore DISMISS CALLBACK CALLED!");
-        modalStore.setState(false);
+        modalStoreHook.setState(false);
       },
 
 
