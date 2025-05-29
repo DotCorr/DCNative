@@ -74,9 +74,9 @@ class SimpleApp extends StatefulComponent {
             modal.setValue(false);
           },
 
-          onDismiss: (){
+          onDismiss: () {
             print("🔥 MODAL DISMISS CALLBACK CALLED!");
-              modal.setValue(false);
+            modal.setValue(false);
           },
 
           onRequestClose: () {
@@ -101,20 +101,39 @@ class SimpleApp extends StatefulComponent {
                 shadowOffsetY: 2,
               ),
               children: [
-                DCFTextInput(
-                  style: StyleSheet(
-                    borderColor: Colors.transparent,
-                    borderWidth: 0,
-                    backgroundColor: Colors.pink,
-                  ),
-                  value: textVal.value,
-                  onFocus:
-                      () => print("modal textinput focused ${textVal.value}"),
-                  onBlur:
-                      () => print("modal textinput blurred ${textVal.value}"),
-                  onChangeText: (v) {
-                    textVal.setValue(v);
-                    print("modal textinput changed $v");
+                DCFFlatList(
+                  data: [
+                    "Item 1",
+                    "Item 2",
+                    "Item 3",
+                    "Item 4",
+                    "Item 5",
+                    "Item 6",
+                    "Item 7",
+                    "Item 8",
+                    "Item 9",
+                    "Item 10",
+                  ],
+                  renderItem: (v, i) {
+                    print("value: $v, index: $i");
+                    return DCFTextInput(
+                      style: StyleSheet(
+                        borderColor: Colors.transparent,
+                        borderWidth: 0,
+                        backgroundColor: Colors.pink,
+                      ),
+                      value: textVal.value,
+                      onFocus:
+                          () =>
+                              print("modal textinput focused ${textVal.value}"),
+                      onBlur:
+                          () =>
+                              print("modal textinput blurred ${textVal.value}"),
+                      onChangeText: (v) {
+                        textVal.setValue(v);
+                        print("modal textinput changed $v");
+                      },
+                    );
                   },
                 ),
                 DCFText(content: "This is a modal"),

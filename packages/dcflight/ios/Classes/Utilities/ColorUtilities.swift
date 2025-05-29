@@ -14,6 +14,12 @@ import Foundation
             return UIColor.clear
         }
         
+        // Handle Flutter Color object format: "Color(alpha: 1.0000, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB)"
+        if hexString.contains("Color(") && hexString.contains("alpha:") {
+            print("🎨 Parsing Flutter Color object format")
+            return parseFlutterColorObject(hexString)
+        }
+        
         // Print debug info for troubleshooting color issues
         print("⚡️ ColorUtilities: Processing color string: \(hexString)")
         
@@ -131,5 +137,38 @@ import Foundation
                lowerString == "rgba(0,0,0,0)" ||
                lowerString == "#00000000" ||
                lowerString == "0"
+    }
+    
+    /// Parse Flutter Color object format: "Color(alpha: 1.0000, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB)"
+    private static func parseFlutterColorObject(_ colorString: String) -> UIColor? {
+        print("🔍 Parsing Flutter Color object: \(colorString)")
+        
+        // Use regex to extract color components
+        let pattern = #"alpha:\s*([\d.]+).*?red:\s*([\d.]+).*?green:\s*([\d.]+).*?blue:\s*([\d.]+)"#
+        
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []),
+              let match = regex.firstMatch(in: colorString, options: [], range: NSRange(location: 0, length: colorString.count)) else {
+            print("⚠️ Failed to parse Flutter Color object format")
+            return .magenta // Return obvious color for debugging
+        }
+        
+        // Extract components
+        let alphaRange = Range(match.range(at: 1), in: colorString)!
+        let redRange = Range(match.range(at: 2), in: colorString)!
+        let greenRange = Range(match.range(at: 3), in: colorString)!
+        let blueRange = Range(match.range(at: 4), in: colorString)!
+        
+        guard let alpha = Double(String(colorString[alphaRange])),
+              let red = Double(String(colorString[redRange])),
+              let green = Double(String(colorString[greenRange])),
+              let blue = Double(String(colorString[blueRange])) else {
+            print("⚠️ Failed to convert Flutter Color components to numbers")
+            return .magenta
+        }
+        
+        let color = UIColor(red: CGFloat(red), green: CGFloat(green), blue: CGFloat(blue), alpha: CGFloat(alpha))
+        print("🎨 Parsed Flutter Color: R=\(red), G=\(green), B=\(blue), A=\(alpha) -> \(color)")
+        
+        return color
     }
 }
