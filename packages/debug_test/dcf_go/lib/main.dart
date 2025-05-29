@@ -1,9 +1,10 @@
-import 'package:dcf_go/app/example_app/app.dart';
-import 'package:dcflight/dcflight.dart';
 
+import 'package:dcf_go/app/simple_app/app.dart';
+import 'package:dcflight/dcflight.dart';
+import 'app/dcfgo/dcfgo_app.dart';
 
 void main() {
-  DCFlight.start(app: ExampleApp());
+  DCFlight.start(app: SimpleApp());
 }
 
 

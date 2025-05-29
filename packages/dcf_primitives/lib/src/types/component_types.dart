@@ -168,6 +168,32 @@ enum SeparatorPosition {
   none,
 }
 
+/// Image resize modes - type-safe options for image resizing
+enum ImageResizeMode {
+  cover,
+  contain,
+  stretch,
+  repeat,
+  center,
+}
+
+extension ImageResizeModeExtension on ImageResizeMode {
+  String get name {
+    switch (this) {
+      case ImageResizeMode.cover:
+        return 'cover';
+      case ImageResizeMode.contain:
+        return 'contain';
+      case ImageResizeMode.stretch:
+        return 'stretch';
+      case ImageResizeMode.repeat:
+        return 'repeat';
+      case ImageResizeMode.center:
+        return 'center';
+    }
+  }
+}
+
 /// Alert action configuration
 class AlertAction {
   final String title;

@@ -1,12 +1,13 @@
 import 'package:dcflight/dcflight.dart';
+import '../types/component_types.dart' as types;
 
 /// Image properties
 class ImageProps {
   /// The image source URI (can be a network URL or local resource)
   final String source;
   
-  /// Resize mode for the image
-  final String? resizeMode;
+  /// Resize mode for the image - type-safe enum
+  final types.ImageResizeMode? resizeMode;
   
   /// Whether to fade in the image when loaded
   final bool? fadeDuration;
@@ -27,7 +28,7 @@ class ImageProps {
     return {
       'source': source,
       'isRelativePath': false,
-      if (resizeMode != null) 'resizeMode': resizeMode,
+      if (resizeMode != null) 'resizeMode': resizeMode!.name,
       if (fadeDuration != null) 'fadeDuration': fadeDuration,
       if (placeholder != null) 'placeholder': placeholder,
     };

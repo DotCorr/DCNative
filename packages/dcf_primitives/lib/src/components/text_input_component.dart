@@ -9,7 +9,7 @@ class DCFTextInput extends StatelessComponent {
   final String? value;
   final String? defaultValue;
   final String? placeholder;
-  final String? placeholderTextColor;
+  final Color? placeholderTextColor;
   final types.TextInputType inputType;
   final types.KeyboardType keyboardType;
   final types.AutoCapitalizationType autoCapitalization;
@@ -29,11 +29,11 @@ class DCFTextInput extends StatelessComponent {
   final bool multiline;
   final bool secureTextEntry;
   final bool selectTextOnFocus;
-  final String? selectionColor;
+  final Color? selectionColor;
   final bool spellCheck;
   final String? textAlign;
   final Color? textColor;
-  final String? fontSize;
+  final double? fontSize;
   final String? fontWeight;
   final String? fontFamily;
   final void Function(String)? onChangeText;
