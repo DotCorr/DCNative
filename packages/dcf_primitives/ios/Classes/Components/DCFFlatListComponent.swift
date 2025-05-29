@@ -2,11 +2,9 @@ import UIKit
 import dcflight
 
 class DCFFlatListComponent: NSObject, DCFComponent {
-    static let sharedInstance = DCFFlatListComponent()
+    // Singleton delegate that handles all flat list events
+    private static let sharedDelegate = FlatListEventDelegate()
     private static var listInstances: [UIView: DCFFlatListView] = [:]
-    
-    // Event handlers storage following ScrollView pattern
-    static var flatListEventHandlers: [UIView: (String, [String], (String, String, [String: Any]) -> Void)] = [:]
     
     required override init() {
         super.init()
@@ -15,8 +13,10 @@ class DCFFlatListComponent: NSObject, DCFComponent {
     func createView(props: [String: Any]) -> UIView {
         let flatListView = DCFFlatListView()
         
-        // Set component reference for event triggering
-        flatListView.component = self
+        // Set the shared delegate
+        flatListView.collectionView.delegate = DCFFlatListComponent.sharedDelegate
+        flatListView.collectionView.dataSource = DCFFlatListComponent.sharedDelegate
+        flatListView.collectionView.prefetchDataSource = DCFFlatListComponent.sharedDelegate
         
         // Store reference
         DCFFlatListComponent.listInstances[flatListView] = flatListView
@@ -42,50 +42,40 @@ class DCFFlatListComponent: NSObject, DCFComponent {
     
     // MARK: - Event Management Following ScrollView Pattern
     
-    func addEventListeners(to view: UIView, events: [String], jsModuleName: String, with callback: @escaping (String, String, [String: Any]) -> Void) {
-        DCFFlatListComponent.flatListEventHandlers[view] = (jsModuleName, events, callback)
+    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
+                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
+        guard let flatListView = view as? DCFFlatListView else { 
+            print("❌ Cannot add event listeners to non-flat-list view")
+            return 
+        }
+ 
+        // Register this flat list with the shared delegate
+        DCFFlatListComponent.sharedDelegate.registerFlatList(flatListView, viewId: viewId, eventTypes: eventTypes, callback: eventCallback)
         
-        // Also store in associated objects as fallback
-        objc_setAssociatedObject(view, &DCFAssociatedKeys.eventHandlerKey, (jsModuleName, events, callback), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        print("✅ Successfully added flat list event handlers to view \(viewId) for events: \(eventTypes)")
     }
     
-    func removeEventListeners(from view: UIView) {
-        DCFFlatListComponent.flatListEventHandlers.removeValue(forKey: view)
-        objc_setAssociatedObject(view, &DCFAssociatedKeys.eventHandlerKey, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    }
-    
-    private func triggerEventIfRegistered(_ view: UIView, eventType: String, eventData: [String: Any]) {
-        // Try static dictionary first
-        if let (jsModuleName, events, callback) = DCFFlatListComponent.flatListEventHandlers[view] {
-            if events.contains(eventType) {
-                callback(jsModuleName, eventType, eventData)
-                return
-            }
-        }
+    func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
+        guard let flatListView = view as? DCFFlatListView else { return }
         
-        // Fallback to associated objects
-        if let (jsModuleName, events, callback) = objc_getAssociatedObject(view, &DCFAssociatedKeys.eventHandlerKey) as? (String, [String], (String, String, [String: Any]) -> Void) {
-            if events.contains(eventType) {
-                callback(jsModuleName, eventType, eventData)
-                return
-            }
-        }
+        // Unregister this flat list from the shared delegate
+        DCFFlatListComponent.sharedDelegate.unregisterFlatList(flatListView, viewId: viewId)
         
-        // Silent fallback - no error logging for better performance
+        print("✅ Removed event listeners from flat list view: \(viewId)")
     }
 }
 
 // MARK: - High-Performance FlatList View
 
 class DCFFlatListView: UIView {
-    private var collectionView: UICollectionView!
+    var collectionView: UICollectionView!  // Made public for delegate access
     private var flowLayout: UICollectionViewFlowLayout!
     
     // Performance optimization properties
     private var estimatedItemSize: CGFloat = 50
-    private var itemCount: Int = 0
-    private var orientation: String = "vertical"
-    private var inverted: Bool = false
+    var itemCount: Int = 0  // Made public for delegate access
+    var orientation: String = "vertical"  // Made public for delegate access
+    var inverted: Bool = false  // Made public for delegate access
     
     // FlashList-inspired optimizations
     private var initialNumToRender: Int = 10
@@ -109,12 +99,9 @@ class DCFFlatListView: UIView {
     private var renderRange: Range<Int> = 0..<0
     
     // Event handlers
-    private var onScroll: ((CGFloat, CGFloat) -> Void)?
-    private var onEndReached: (() -> Void)?
-    private var onViewableItemsChanged: (([Int]) -> Void)?
-    
-    // Component reference for event triggering
-    weak var component: DCFFlatListComponent?
+    var onScroll: ((CGFloat, CGFloat) -> Void)?  // Made public for delegate access
+    var onEndReached: (() -> Void)?  // Made public for delegate access
+    var onViewableItemsChanged: (([Int]) -> Void)?  // Made public for delegate access
     
     // Threshold for onEndReached
     private var onEndReachedThreshold: CGFloat = 0.1
@@ -140,9 +127,7 @@ class DCFFlatListView: UIView {
         // Create collection view
         collectionView = UICollectionView(frame: bounds, collectionViewLayout: flowLayout)
         collectionView.backgroundColor = UIColor.clear
-        collectionView.delegate = self
-        collectionView.dataSource = self
-        collectionView.prefetchDataSource = self
+        // Note: delegate, dataSource, and prefetchDataSource are set in createView
         
         // Register cell
         collectionView.register(DCFFlatListCell.self, forCellWithReuseIdentifier: "DCFFlatListCell")
@@ -271,7 +256,7 @@ class DCFFlatListView: UIView {
         }
     }
     
-    private func updateVisibleRange() {
+    func updateVisibleRange() {  // Made public for delegate access
         let visibleRect = collectionView.bounds
         let visibleIndexPaths = collectionView.indexPathsForVisibleItems
         
@@ -341,7 +326,7 @@ class DCFFlatListView: UIView {
         }
     }
     
-    private func estimateItemSize(for index: Int) -> CGSize {
+    func estimateItemSize(for index: Int) -> CGSize {  // Made public for delegate access
         // Return cached size if available
         if let cachedSize = itemSizeCache[index] {
             return cachedSize
@@ -351,7 +336,7 @@ class DCFFlatListView: UIView {
         return averageItemSize
     }
     
-    private func cacheItemSize(_ size: CGSize, for index: Int) {
+    func cacheItemSize(_ size: CGSize, for index: Int) {  // Made public for delegate access
         itemSizeCache[index] = size
         
         // Update average size for better estimates
@@ -384,77 +369,154 @@ extension DCFFlatListView: UICollectionViewDataSource {
     }
 }
 
-// MARK: - Collection View Delegate & Flow Layout
+// MARK: - FlatList Event Delegate
 
-extension DCFFlatListView: UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
+class FlatListEventDelegate: NSObject, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout, UICollectionViewDataSource, UICollectionViewDataSourcePrefetching {
+    // Store event callbacks for each flat list view
+    private var eventCallbacks = [DCFFlatListView: (String, [String], (String, String, [String: Any]) -> Void)]()
+    
+    /// Register a flat list for event handling
+    func registerFlatList(_ flatListView: DCFFlatListView, viewId: String, eventTypes: [String], 
+                         callback: @escaping (String, String, [String: Any]) -> Void) {
+        eventCallbacks[flatListView] = (viewId, eventTypes, callback)
+        print("📋 Registered flat list \(viewId) with events: \(eventTypes)")
+    }
+    
+    /// Unregister a flat list from event handling
+    func unregisterFlatList(_ flatListView: DCFFlatListView, viewId: String) {
+        eventCallbacks.removeValue(forKey: flatListView)
+        print("📋 Unregistered flat list \(viewId)")
+    }
+    
+    /// Trigger an event for a flat list if it's registered for that event type
+    private func triggerEventIfRegistered(_ flatListView: DCFFlatListView, eventType: String, eventData: [String: Any]) {
+        guard let (viewId, eventTypes, callback) = eventCallbacks[flatListView] else {
+            // No event handler registered for this flat list - this is normal during setup
+            return
+        }
+        
+        // Check if this specific event type is registered
+        if eventTypes.contains(eventType) {
+            callback(viewId, eventType, eventData)
+        }
+    }
+    
+    // MARK: - UICollectionViewDataSource
+    
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        guard let flatListView = collectionView.superview as? DCFFlatListView else { return 0 }
+        return flatListView.itemCount
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "DCFFlatListCell", for: indexPath) as! DCFFlatListCell
+        
+        guard let flatListView = collectionView.superview as? DCFFlatListView else { return cell }
+        
+        cell.configureForIndex(indexPath.item, inverted: flatListView.inverted, orientation: flatListView.orientation)
+        
+        return cell
+    }
+    
+    // MARK: - UICollectionViewDelegateFlowLayout
+    
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return estimateItemSize(for: indexPath.item)
+        guard let flatListView = collectionView.superview as? DCFFlatListView else { 
+            return CGSize(width: 50, height: 50) 
+        }
+        return flatListView.estimateItemSize(for: indexPath.item)
     }
     
     func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard let flatListView = collectionView.superview as? DCFFlatListView else { return }
+        
         // Cache actual cell size after display
-        cacheItemSize(cell.frame.size, for: indexPath.item)
+        flatListView.cacheItemSize(cell.frame.size, for: indexPath.item)
     }
     
+    // MARK: - UIScrollViewDelegate Methods
+    
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        updateVisibleRange()
+        guard let flatListView = scrollView.superview as? DCFFlatListView else { return }
+        
+        flatListView.updateVisibleRange()
         
         // Trigger scroll event
-        onScroll?(scrollView.contentOffset.x, scrollView.contentOffset.y)
+        flatListView.onScroll?(scrollView.contentOffset.x, scrollView.contentOffset.y)
         
         // Trigger scroll events to bridge
-        component?.triggerEventIfRegistered(
-            self,
-            eventType: "onScroll",
-            eventData: [
-                "contentOffset": [
-                    "x": scrollView.contentOffset.x,
-                    "y": scrollView.contentOffset.y
-                ],
-                "contentSize": [
-                    "width": scrollView.contentSize.width,
-                    "height": scrollView.contentSize.height
-                ]
+        triggerEventIfRegistered(flatListView, eventType: "onScroll", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ],
+            "contentSize": [
+                "width": scrollView.contentSize.width,
+                "height": scrollView.contentSize.height
+            ],
+            "layoutMeasurement": [
+                "width": scrollView.bounds.width,
+                "height": scrollView.bounds.height
             ]
-        )
+        ])
     }
     
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        component?.triggerEventIfRegistered(
-            self,
-            eventType: "onScrollBeginDrag",
-            eventData: [:]
-        )
+        guard let flatListView = scrollView.superview as? DCFFlatListView else { return }
+        
+        triggerEventIfRegistered(flatListView, eventType: "onScrollBeginDrag", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ]
+        ])
     }
     
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        component?.triggerEventIfRegistered(
-            self,
-            eventType: "onScrollEndDrag",
-            eventData: ["decelerate": decelerate]
-        )
-    }
-    
-    func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
-        component?.triggerEventIfRegistered(
-            self,
-            eventType: "onMomentumScrollBegin",
-            eventData: [:]
-        )
+        guard let flatListView = scrollView.superview as? DCFFlatListView else { return }
+        
+        triggerEventIfRegistered(flatListView, eventType: "onScrollEndDrag", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ],
+            "willDecelerate": decelerate
+        ])
+        
+        if !decelerate {
+            triggerEventIfRegistered(flatListView, eventType: "onScrollEnd", eventData: [
+                "contentOffset": [
+                    "x": scrollView.contentOffset.x,
+                    "y": scrollView.contentOffset.y
+                ]
+            ])
+        }
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        component?.triggerEventIfRegistered(
-            self,
-            eventType: "onMomentumScrollEnd",
-            eventData: [:]
-        )
+        guard let flatListView = scrollView.superview as? DCFFlatListView else { return }
+        
+        triggerEventIfRegistered(flatListView, eventType: "onScrollEnd", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ]
+        ])
     }
-}
-
-// MARK: - Collection View Data Source Prefetching
-
-extension DCFFlatListView: UICollectionViewDataSourcePrefetching {
+    
+    func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
+        guard let flatListView = scrollView.superview as? DCFFlatListView else { return }
+        
+        triggerEventIfRegistered(flatListView, eventType: "onMomentumScrollBegin", eventData: [
+            "contentOffset": [
+                "x": scrollView.contentOffset.x,
+                "y": scrollView.contentOffset.y
+            ]
+        ])
+    }
+    
+    // MARK: - UICollectionViewDataSourcePrefetching
+    
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
         // Implement prefetching logic for performance
         // This would typically involve preparing data for upcoming cells
