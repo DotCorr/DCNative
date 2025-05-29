@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dcf_go/app/dcfgo/app.dart';
 import 'package:dcf_primitives/dcf_primitives.dart';
 import 'package:dcflight/dcflight.dart';
 
@@ -14,10 +15,9 @@ class ExampleApp extends StatefulComponent {
 
     useEffect(() {
       // This effect runs once when the component is mounted
-      
-        infoModal.setValue(true);
-        
-   
+
+      infoModal.setValue(true);
+
       return () {
         // This cleanup function runs when the component is unmounted
         print("ExampleApp unmounted");
@@ -37,30 +37,37 @@ class ExampleApp extends StatefulComponent {
           visible: infoModal.value,
           children: [
             DCFView(
-              layout: LayoutProps(
-                flex: 1,
-                padding: 100,
-                justifyContent: YogaJustifyContent.center,
-                alignItems: YogaAlign.center,
+              style: StyleSheet(
+                backgroundColor: Colors.purple,
+                borderRadius: 10,
               ),
+
               children: [
-                DCFText(
-                  content: "This is a modal",
-                  textProps: TextProps(fontSize: 20, fontWeight: 'bold'),
-                ),
-                DCFButton(
-                  buttonProps: ButtonProps(title: "Close Modal"),
-                  onPress: (v) {
-                    infoModal.setValue(false);
-                    print("Modal closed");
-                  },
+                DCFView(
+                  layout: LayoutProps(
+                    flex: 1,
+                    justifyContent: YogaJustifyContent.center,
+                    alignItems: YogaAlign.center,
+                  ),
+                  children: [
+                    DCFText(
+                      content: "This is a modal",
+                      textProps: TextProps(fontSize: 20, fontWeight: 'bold'),
+                    ),
+                    DCFButton(
+                      buttonProps: ButtonProps(title: "Close Modal"),
+                      onPress: (v) {
+                        infoModal.setValue(false);
+                        print("Modal closed");
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
           ],
           statusBarTranslucent: true,
           onDismiss: () {
-       
             print("dismissed modal");
 
             alert.setValue(true);
@@ -85,12 +92,13 @@ class ExampleApp extends StatefulComponent {
         DCFButton(
           buttonProps: ButtonProps(title: "Show Modal"),
           onPress: (v) {
-           infoModal.setValue(true);
+            infoModal.setValue(true);
             print("Modal button pressed, alert set to ${alert.value}");
           },
         ),
 
-        DCFAlert(title: "Alert",
+        DCFAlert(
+          title: "Alert",
           message: "This is an alert message",
           // visible: alert.value,
           onDismiss: () {

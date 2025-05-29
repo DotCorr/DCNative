@@ -234,31 +234,4 @@ class DCFModalComponent: NSObject, DCFComponent {
             }
         }
     }
-    
-    // MARK: - Layout Override
-    
-    // Override layout to prevent modal container from participating in layout
-    func applyLayout(_ view: UIView, layout: YGNodeLayout) {
-        // Modal container should NEVER have layout applied
-        // Keep it at zero size and hidden always
-        view.frame = CGRect.zero
-        view.isHidden = true
-        view.alpha = 0
-        print("📱 Modal container layout blocked - staying at zero size")
-    }
-    
-    // Override intrinsic size to return zero
-    func getIntrinsicSize(_ view: UIView, forProps props: [String: Any]) -> CGSize {
-        // Modal container should never contribute to layout calculations
-        return CGSize.zero
-    }
-    
-    // Override view registration to prevent layout system interference
-    func viewRegisteredWithShadowTree(_ view: UIView, nodeId: String) {
-        // Ensure the view stays hidden and at zero size even when registered with layout system
-        view.isHidden = true
-        view.alpha = 0
-        view.frame = CGRect.zero
-        print("📱 Modal container registered with shadow tree but forced to zero size")
-    }
 }
