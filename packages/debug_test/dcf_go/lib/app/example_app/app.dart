@@ -31,7 +31,7 @@ class ExampleApp extends StatefulComponent {
         flexDirection: YogaFlexDirection.column,
         justifyContent: YogaJustifyContent.flexStart,
         alignItems: YogaAlign.stretch,
-        padding: 50
+        padding: 100
       ),
       children: [
       
