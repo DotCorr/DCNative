@@ -72,7 +72,7 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
         // Don't present if already presented
         if DCFModalComponent.activeModals[view] != nil { return }
         
-        let modalViewController = UIViewController()
+        let modalViewController: UIViewController
         let modalView = UIView()
         
         // Configure modal view
@@ -87,7 +87,26 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
             modalView.backgroundColor = UIColor.white
         }
         
-        modalViewController.view = modalView
+        // Check if header is specified
+        if let headerProps = props["header"] as? [String: Any] {
+            // Create navigation controller with header
+            let contentViewController = UIViewController()
+            contentViewController.view = modalView
+            
+            let navigationController = UINavigationController(rootViewController: contentViewController)
+            modalViewController = navigationController
+            
+            // Configure navigation bar (header)
+            setupModalHeader(navigationController: navigationController, 
+                           contentViewController: contentViewController,
+                           headerProps: headerProps, 
+                           containerView: view)
+        } else {
+            // No header - use plain view controller
+            let plainViewController = UIViewController()
+            plainViewController.view = modalView
+            modalViewController = plainViewController
+        }
         
         // Store weak reference to container view for delegate callbacks
         objc_setAssociatedObject(
@@ -313,5 +332,132 @@ extension DCFModalComponent {
             // Trigger onDismiss event
             triggerEvent(view: containerView, eventType: "onDismiss", eventData: [:])
         }
+    }
+}
+
+// MARK: - Modal Header Configuration
+    
+extension DCFModalComponent {
+    
+    private func setupModalHeader(navigationController: UINavigationController, 
+                                contentViewController: UIViewController,
+                                headerProps: [String: Any], 
+                                containerView: UIView) {
+        
+        let navigationBar = navigationController.navigationBar
+        
+        // Configure navigation bar appearance
+        if let backgroundColor = headerProps["backgroundColor"] as? String {
+            navigationBar.backgroundColor = ColorUtilities.color(fromHexString: backgroundColor)
+        }
+        
+        // Set title
+        if let title = headerProps["title"] as? String {
+            contentViewController.title = title
+            
+            // Configure title appearance
+            if let titleColor = headerProps["titleColor"] as? String {
+                navigationBar.titleTextAttributes = [
+                    .foregroundColor: ColorUtilities.color(fromHexString: titleColor)
+                ]
+            }
+            
+            if let fontSize = headerProps["fontSize"] as? Double {
+                var attributes = navigationBar.titleTextAttributes ?? [:]
+                let currentFont = (attributes[.font] as? UIFont) ?? UIFont.systemFont(ofSize: 17)
+                attributes[.font] = currentFont.withSize(CGFloat(fontSize))
+                navigationBar.titleTextAttributes = attributes
+            }
+            
+            if let fontWeight = headerProps["fontWeight"] as? String {
+                var attributes = navigationBar.titleTextAttributes ?? [:]
+                let currentSize = ((attributes[.font] as? UIFont)?.pointSize) ?? 17
+                
+                let font: UIFont
+                switch fontWeight {
+                case "bold":
+                    font = UIFont.boldSystemFont(ofSize: currentSize)
+                case "medium":
+                    font = UIFont.systemFont(ofSize: currentSize, weight: .medium)
+                case "light":
+                    font = UIFont.systemFont(ofSize: currentSize, weight: .light)
+                default:
+                    font = UIFont.systemFont(ofSize: currentSize)
+                }
+                
+                attributes[.font] = font
+                navigationBar.titleTextAttributes = attributes
+            }
+        }
+        
+        // Configure left button
+        if let leftButtonProps = headerProps["leftButton"] as? [String: Any] {
+            let leftButton = createHeaderButton(buttonProps: leftButtonProps, containerView: containerView, isLeftButton: true)
+            contentViewController.navigationItem.leftBarButtonItem = leftButton
+        } else if let showCloseButton = headerProps["showCloseButton"] as? Bool, showCloseButton {
+            // Add default close button on the left
+            let closeButton = UIBarButtonItem(title: "Close", style: .plain, target: self, action: #selector(defaultCloseButtonTapped(_:)))
+            
+            // Store container view reference for close button
+            objc_setAssociatedObject(closeButton, 
+                                   UnsafeRawPointer(bitPattern: "containerView".hashValue)!, 
+                                   containerView, 
+                                   .OBJC_ASSOCIATION_ASSIGN)
+            
+            contentViewController.navigationItem.leftBarButtonItem = closeButton
+        }
+        
+        // Configure right button
+        if let rightButtonProps = headerProps["rightButton"] as? [String: Any] {
+            let rightButton = createHeaderButton(buttonProps: rightButtonProps, containerView: containerView, isLeftButton: false)
+            contentViewController.navigationItem.rightBarButtonItem = rightButton
+        }
+    }
+    
+    private func createHeaderButton(buttonProps: [String: Any], containerView: UIView, isLeftButton: Bool) -> UIBarButtonItem {
+        let title = buttonProps["title"] as? String ?? ""
+        let styleString = buttonProps["style"] as? String ?? "plain"
+        let enabled = buttonProps["enabled"] as? Bool ?? true
+        
+        let style: UIBarButtonItem.Style
+        switch styleString {
+        case "done":
+            style = .done
+        case "bordered":
+            style = .plain // iOS doesn't have direct bordered style for bar button items
+        default:
+            style = .plain
+        }
+        
+        let button = UIBarButtonItem(title: title, style: style, target: self, action: #selector(headerButtonTapped(_:)))
+        button.isEnabled = enabled
+        
+        // Store container view and button side for event handling
+        objc_setAssociatedObject(button, 
+                               UnsafeRawPointer(bitPattern: "containerView".hashValue)!, 
+                               containerView, 
+                               .OBJC_ASSOCIATION_ASSIGN)
+        
+        objc_setAssociatedObject(button, 
+                               UnsafeRawPointer(bitPattern: "isLeftButton".hashValue)!, 
+                               isLeftButton, 
+                               .OBJC_ASSOCIATION_RETAIN)
+        
+        return button
+    }
+    
+    @objc private func headerButtonTapped(_ sender: UIBarButtonItem) {
+        guard let containerView = objc_getAssociatedObject(sender, UnsafeRawPointer(bitPattern: "containerView".hashValue)!) as? UIView,
+              let isLeftButton = objc_getAssociatedObject(sender, UnsafeRawPointer(bitPattern: "isLeftButton".hashValue)!) as? Bool else { return }
+        
+        let eventType = isLeftButton ? "onLeftButtonPress" : "onRightButtonPress"
+        triggerEvent(view: containerView, eventType: eventType, eventData: [:])
+    }
+    
+    @objc private func defaultCloseButtonTapped(_ sender: UIBarButtonItem) {
+        guard let containerView = objc_getAssociatedObject(sender, UnsafeRawPointer(bitPattern: "containerView".hashValue)!) as? UIView else { return }
+        
+        // Trigger close event - this will dismiss the modal
+        triggerEvent(view: containerView, eventType: "onRequestClose", eventData: [:])
     }
 }

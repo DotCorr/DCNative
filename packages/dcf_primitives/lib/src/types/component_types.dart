@@ -1,6 +1,8 @@
 // DCFlight Component Types
 // Type-safe enums and classes for component properties
 
+import 'package:dcflight/dcflight.dart';
+
 /// Modal presentation styles
 enum ModalPresentationStyle {
   automatic,
@@ -19,6 +21,73 @@ enum ModalTransitionStyle {
   flipHorizontal,
   crossDissolve,
   partialCurl,
+}
+
+/// Modal header button styles
+enum ModalHeaderButtonStyle {
+  plain,
+  done,
+  bordered,
+  borderless,
+}
+
+/// Modal header button item
+class ModalHeaderButton {
+  final String title;
+  final ModalHeaderButtonStyle style;
+  final bool enabled;
+  final void Function()? onPress;
+
+  const ModalHeaderButton({
+    required this.title,
+    this.style = ModalHeaderButtonStyle.plain,
+    this.enabled = true,
+    this.onPress,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'style': style.name,
+      'enabled': enabled,
+    };
+  }
+}
+
+/// Modal header options
+class ModalHeaderOptions {
+  final String? title;
+  final ModalHeaderButton? leftButton;
+  final ModalHeaderButton? rightButton;
+  final bool showCloseButton;
+  final Color? backgroundColor;
+  final Color? titleColor;
+  final double? fontSize;
+  final String? fontWeight;
+
+  const ModalHeaderOptions({
+    this.title,
+    this.leftButton,
+    this.rightButton,
+    this.showCloseButton = true,
+    this.backgroundColor,
+    this.titleColor,
+    this.fontSize,
+    this.fontWeight,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      if (title != null) 'title': title,
+      if (leftButton != null) 'leftButton': leftButton!.toMap(),
+      if (rightButton != null) 'rightButton': rightButton!.toMap(),
+      'showCloseButton': showCloseButton,
+      if (backgroundColor != null) 'backgroundColor': backgroundColor.toString(),
+      if (titleColor != null) 'titleColor': titleColor.toString(),
+      if (fontSize != null) 'fontSize': fontSize,
+      if (fontWeight != null) 'fontWeight': fontWeight,
+    };
+  }
 }
 
 /// Alert action styles

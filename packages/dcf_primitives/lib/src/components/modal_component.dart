@@ -12,10 +12,13 @@ class DCFModal extends StatelessComponent {
   final bool statusBarTranslucent;
   final String? backgroundColor;
   final bool hardwareAccelerated;
+  final ModalHeaderOptions? header;
   final void Function()? onShow;
   final void Function()? onDismiss;
   final void Function()? onRequestClose;
   final void Function()? onOrientationChange;
+  final void Function()? onLeftButtonPress;
+  final void Function()? onRightButtonPress;
   final List<DCFComponentNode> children;
 
   /// Event handlers
@@ -31,10 +34,13 @@ class DCFModal extends StatelessComponent {
     this.statusBarTranslucent = false,
     this.backgroundColor,
     this.hardwareAccelerated = false,
+    this.header,
     this.onShow,
     this.onDismiss,
     this.onRequestClose,
     this.onOrientationChange,
+    this.onLeftButtonPress,
+    this.onRightButtonPress,
     this.children = const [],
     this.events,
   });
@@ -59,6 +65,22 @@ class DCFModal extends StatelessComponent {
     if (onOrientationChange != null) {
       eventMap['onOrientationChange'] = onOrientationChange;
     }
+    
+    if (onLeftButtonPress != null) {
+      eventMap['onLeftButtonPress'] = onLeftButtonPress;
+    }
+    
+    if (onRightButtonPress != null) {
+      eventMap['onRightButtonPress'] = onRightButtonPress;
+    }
+    
+    if (onLeftButtonPress != null) {
+      eventMap['onLeftButtonPress'] = onLeftButtonPress;
+    }
+    
+    if (onRightButtonPress != null) {
+      eventMap['onRightButtonPress'] = onRightButtonPress;
+    }
 
     return DCFElement(
       type: 'Modal',
@@ -71,6 +93,7 @@ class DCFModal extends StatelessComponent {
         'statusBarTranslucent': statusBarTranslucent,
         if (backgroundColor != null) 'backgroundColor': backgroundColor,
         'hardwareAccelerated': hardwareAccelerated,
+        if (header != null) 'header': header!.toMap(),
         ...eventMap,
       },
       children: children,
