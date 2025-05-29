@@ -81,7 +81,7 @@ class DCFContextMenuComponent: NSObject, DCFComponent {
         // Remove existing long press gestures
         view.gestureRecognizers?.removeAll { $0 is UILongPressGestureRecognizer }
         
-        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        let longPress = UILongPressGestureRecognizer(target: DCFContextMenuComponent.sharedInstance, action: #selector(handleLongPress(_:)))
         longPress.minimumPressDuration = 0.5
         
         // Store props for gesture handler

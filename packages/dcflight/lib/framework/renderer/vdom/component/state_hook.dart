@@ -23,10 +23,10 @@ class StateHook<T> extends Hook {
   StateHook(this._value, this._name, this._scheduleUpdate);
 
   /// Get the current value
-  T get value => _value;
+  T get state => _value;
 
   /// Set the value and trigger update
-  void setValue(T newValue) {
+  void setState(T newValue) {
     // Only update and trigger render if value actually changed
     if (_value != newValue) {
       _value = newValue;

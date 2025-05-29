@@ -414,17 +414,9 @@ extension DCFModalComponent {
                 var attributes = navigationBar.titleTextAttributes ?? [:]
                 let currentSize = ((attributes[.font] as? UIFont)?.pointSize) ?? 17
                 
-                let font: UIFont
-                switch fontWeight {
-                case "bold":
-                    font = UIFont.boldSystemFont(ofSize: currentSize)
-                case "medium":
-                    font = UIFont.systemFont(ofSize: currentSize, weight: .medium)
-                case "light":
-                    font = UIFont.systemFont(ofSize: currentSize, weight: .light)
-                default:
-                    font = UIFont.systemFont(ofSize: currentSize)
-                }
+                // Use the centralized font weight utility
+                let weight = fontWeightFromString(fontWeight)
+                let font = UIFont.systemFont(ofSize: currentSize, weight: weight)
                 
                 attributes[.font] = font
                 navigationBar.titleTextAttributes = attributes

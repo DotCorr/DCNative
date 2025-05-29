@@ -37,8 +37,8 @@ class DCFDropdownComponent: NSObject, DCFComponent {
             arrowImageView.heightAnchor.constraint(equalToConstant: 16)
         ])
         
-        // Add tap gesture
-        button.addTarget(self, action: #selector(dropdownTapped(_:)), for: .touchUpInside)
+        // Add tap gesture - use sharedInstance to prevent deallocation
+        button.addTarget(DCFDropdownComponent.sharedInstance, action: #selector(dropdownTapped(_:)), for: .touchUpInside)
         
         // Apply initial properties
         updateView(button, withProps: props)

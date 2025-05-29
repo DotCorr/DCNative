@@ -110,7 +110,7 @@ class AddNoteModal extends StatefulComponent {
                           children: [
                             DCFImage(
                               imageProps: ImageProps(
-                                source: avatarUrl.value,
+                                source: avatarUrl.state,
                                 resizeMode: ImageResizeMode.cover,
                               ),
                               layout: LayoutProps(
@@ -163,10 +163,10 @@ class AddNoteModal extends StatefulComponent {
                       children: [
                         DCFTextInput(
                           placeholder: "Enter note title...",
-                          value: title.value,
+                          value: title.state,
                           fontSize: 16,
                           onChangeText: (text) {
-                            title.setValue(text);
+                            title.setState(text);
                           },
                           layout: LayoutProps(flex: 1),
                           style: StyleSheet(
@@ -205,11 +205,11 @@ class AddNoteModal extends StatefulComponent {
                       children: [
                         DCFTextInput(
                           placeholder: "Write your note here...",
-                          value: content.value,
+                          value: content.state,
                           multiline: true,
                           fontSize: 16,
                           onChangeText: (text) {
-                            content.setValue(text);
+                            content.setState(text);
                           },
                           layout: LayoutProps(flex: 1),
                           style: StyleSheet(
@@ -260,7 +260,7 @@ class AddNoteModal extends StatefulComponent {
                 ),
                 DCFTouchableOpacity(
                   onPress: (v) {
-                    _saveNote(title.value, content.value, avatarUrl.value, tags.value, isEditing);
+                    _saveNote(title.state, content.state, avatarUrl.state, tags.state, isEditing);
                   },
                   layout: LayoutProps(
                     flex: 1,
@@ -299,7 +299,7 @@ class AddNoteModal extends StatefulComponent {
           children: [
             ImagePickerModal(
               onImageSelected: (url) {
-                avatarUrl.setValue(url);
+                avatarUrl.setState(url);
                 imagePickerModalStore.setState(false);
               },
             ),

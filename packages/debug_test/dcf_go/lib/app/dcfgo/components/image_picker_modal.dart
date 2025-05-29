@@ -20,7 +20,7 @@ class ImagePickerModal extends StatefulComponent {
       {"id": "art", "name": "Art", "icon": DCFIcons.paintBucket},
     ];
 
-    final images = _getImagesForCategory(selectedCategory.value);
+    final images = _getImagesForCategory(selectedCategory.state);
 
     return DCFView(
       layout: LayoutProps(
@@ -95,7 +95,7 @@ class ImagePickerModal extends StatefulComponent {
               children: categories.map((category) =>
                 DCFTouchableOpacity(
                   onPress: (v) {
-                    selectedCategory.setValue(category["id"] as String);
+                    selectedCategory.setState(category["id"] as String);
                   },
                   layout: LayoutProps(
                     marginRight: 12,
@@ -105,7 +105,7 @@ class ImagePickerModal extends StatefulComponent {
                     alignItems: YogaAlign.center,
                   ),
                   style: StyleSheet(
-                    backgroundColor: selectedCategory.value == category["id"]
+                    backgroundColor: selectedCategory.state == category["id"]
                         ? Colors.blue
                         : Colors.grey[100],
                     borderRadius: 20,
@@ -114,7 +114,7 @@ class ImagePickerModal extends StatefulComponent {
                     DCFIcon(
                       iconProps: IconProps(
                         name: category["icon"] as String,
-                        color: selectedCategory.value == category["id"]
+                        color: selectedCategory.state == category["id"]
                             ? Colors.white
                             : Colors.grey[600],
                       ),
@@ -125,7 +125,7 @@ class ImagePickerModal extends StatefulComponent {
                       textProps: TextProps(
                         fontSize: 14,
                         fontWeight: "500",
-                        color: selectedCategory.value == category["id"]
+                        color: selectedCategory.state == category["id"]
                             ? Colors.white
                             : Colors.grey[700],
                       ),
