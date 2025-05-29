@@ -4,6 +4,7 @@ import '../types/component_types.dart';
 /// DCFAlert - Cross-platform alert dialog component
 /// Provides native alert functionality with type-safe styling
 class DCFAlert extends StatelessComponent {
+  final bool visible;
   final String title;
   final String? message;
   final List<AlertAction> actions;
@@ -16,6 +17,7 @@ class DCFAlert extends StatelessComponent {
 
   DCFAlert({
     super.key,
+    this.visible = false,
     required this.title,
     this.message,
     this.actions = const [],
@@ -41,6 +43,7 @@ class DCFAlert extends StatelessComponent {
     return DCFElement(
       type: 'Alert',
       props: {
+        'visible': visible,
         'title': title,
         if (message != null) 'message': message,
         'actions': actions.map((action) => action.toMap()).toList(),

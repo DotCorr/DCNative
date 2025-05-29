@@ -90,6 +90,15 @@ class ExampleApp extends StatefulComponent {
           },
         ),
 
+        DCFAlert(title: "Alert",
+          message: "This is an alert message",
+          // visible: alert.value,
+          onDismiss: () {
+            alert.setValue(false);
+            print("Alert dismissed");
+          },
+        ),
+
         DCFButton(
           buttonProps: ButtonProps(title: "Show Conntext Menu"),
           onPress: (v) {

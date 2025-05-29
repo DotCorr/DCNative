@@ -43,6 +43,13 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         // Apply initial properties
         updateView(button, withProps: props)
         
+        // Check if dropdown should be shown immediately
+        if let visible = props["visible"] as? Bool, visible {
+            DispatchQueue.main.async {
+                self.showDropdown(for: button, props: props)
+            }
+        }
+        
         return button
     }
     
@@ -51,6 +58,15 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         
         // Apply StyleSheet properties
         button.applyStyles(props: props)
+        
+        // Check visible prop to determine if dropdown should be shown
+        if let visible = props["visible"] as? Bool {
+            if visible {
+                showDropdown(for: button, props: props)
+            } else {
+                hideDropdown(for: button)
+            }
+        }
         
         // Store props for dropdown presentation
         objc_setAssociatedObject(
@@ -292,6 +308,105 @@ class DCFDropdownComponent: NSObject, DCFComponent {
         objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
         print("✅ Removed Dropdown event handlers for view \(viewId)")
+    }
+    
+    // MARK: - Programmatic Dropdown Control
+    
+    private func showDropdown(for button: UIButton, props: [String: Any]) {
+        // Same logic as dropdownTapped but without user interaction
+        presentDropdownMenu(for: button, props: props)
+        
+        // Trigger show event
+        self.triggerEventIfRegistered(
+            button,
+            eventType: "onShow",
+            eventData: [:]
+        )
+    }
+    
+    private func hideDropdown(for button: UIButton) {
+        // Dismiss any presented dropdown
+        if let topViewController = UIApplication.shared.windows.first?.rootViewController {
+            var presentingController = topViewController
+            while let presented = presentingController.presentedViewController {
+                presentingController = presented
+            }
+            
+            if presentingController.presentedViewController != nil {
+                presentingController.dismiss(animated: true)
+            }
+        }
+        
+        // Trigger hide event
+        self.triggerEventIfRegistered(
+            button,
+            eventType: "onHide",
+            eventData: [:]
+        )
+    }
+    
+    private func presentDropdownMenu(for button: UIButton, props: [String: Any]) {
+        guard let items = props["items"] as? [[String: Any]] else { return }
+        
+        let alertController = UIAlertController(
+            title: props["placeholder"] as? String ?? "Select an option",
+            message: nil,
+            preferredStyle: .actionSheet
+        )
+        
+        // Add options
+        for (index, item) in items.enumerated() {
+            let title = item["label"] as? String ?? "Option \(index)"
+            let value = item["value"] as? String ?? ""
+            let isSelected = props["selectedValue"] as? String == value
+            
+            let action = UIAlertAction(title: title, style: .default) { _ in
+                // Trigger selection event
+                self.triggerEventIfRegistered(
+                    button,
+                    eventType: "onValueChange",
+                    eventData: [
+                        "selectedValue": value,
+                        "selectedIndex": index,
+                        "selectedLabel": title
+                    ]
+                )
+                
+                // Update button title
+                button.setTitle(title, for: .normal)
+            }
+            
+            // Mark selected item
+            if isSelected {
+                action.setValue(true, forKey: "checked")
+            }
+            
+            alertController.addAction(action)
+        }
+        
+        // Add cancel action
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+            self.triggerEventIfRegistered(
+                button,
+                eventType: "onCancel",
+                eventData: [:]
+            )
+        })
+        
+        // Configure for iPad
+        if let popover = alertController.popoverPresentationController {
+            popover.sourceView = button
+            popover.sourceRect = button.bounds
+        }
+        
+        // Present
+        if let topViewController = UIApplication.shared.windows.first?.rootViewController {
+            var presentingController = topViewController
+            while let presented = presentingController.presentedViewController {
+                presentingController = presented
+            }
+            presentingController.present(alertController, animated: true)
+        }
     }
 }
 

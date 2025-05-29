@@ -25,12 +25,28 @@ class DCFContextMenuComponent: NSObject, DCFComponent {
             setupLongPressGesture(for: containerView, props: props)
         }
         
+        // Check if context menu should be shown immediately
+        if let visible = props["visible"] as? Bool, visible {
+            DispatchQueue.main.async {
+                self.showContextMenu(for: containerView, props: props)
+            }
+        }
+        
         return containerView
     }
     
     func updateView(_ view: UIView, withProps props: [String: Any]) -> Bool {
         // Apply StyleSheet properties
         view.applyStyles(props: props)
+        
+        // Check visible prop to determine if context menu should be shown
+        if let visible = props["visible"] as? Bool {
+            if visible {
+                showContextMenu(for: view, props: props)
+            } else {
+                hideContextMenu(for: view)
+            }
+        }
         
         // Update context menu configuration
         if #available(iOS 13.0, *) {
@@ -301,5 +317,70 @@ extension DCFContextMenuComponent {
         objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
         print("✅ Removed ContextMenu event handlers for view \(viewId)")
+    }
+}
+
+// MARK: - Programmatic Context Menu Control
+
+extension DCFContextMenuComponent {
+    private func showContextMenu(for view: UIView, props: [String: Any]) {
+        // For iOS 13+ with UIContextMenuInteraction
+        if #available(iOS 13.0, *) {
+            // Context menus are typically shown on user interaction
+            // For programmatic showing, we can trigger the menu items selection directly
+            self.triggerEventIfRegistered(
+                view,
+                eventType: "onShow",
+                eventData: [:]
+            )
+        } else {
+            // For older iOS versions, show a custom action sheet
+            showActionSheet(for: view, props: props)
+        }
+    }
+    
+    private func hideContextMenu(for view: UIView) {
+        // Context menus auto-hide when dismissed
+        // Trigger hide event
+        self.triggerEventIfRegistered(
+            view,
+            eventType: "onHide",
+            eventData: [:]
+        )
+    }
+    
+    private func showActionSheet(for view: UIView, props: [String: Any]) {
+        guard let items = props["items"] as? [[String: Any]] else { return }
+        
+        let alertController = UIAlertController(title: props["title"] as? String, 
+                                              message: nil, 
+                                              preferredStyle: .actionSheet)
+        
+        for (index, item) in items.enumerated() {
+            let title = item["title"] as? String ?? "Item \(index)"
+            let action = UIAlertAction(title: title, style: .default) { _ in
+                self.triggerEventIfRegistered(
+                    view,
+                    eventType: "onItemPress",
+                    eventData: [
+                        "index": index,
+                        "title": title
+                    ]
+                )
+            }
+            alertController.addAction(action)
+        }
+        
+        // Add cancel action
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        // Present the action sheet
+        if let topViewController = UIApplication.shared.windows.first?.rootViewController {
+            var presentingController = topViewController
+            while let presented = presentingController.presentedViewController {
+                presentingController = presented
+            }
+            presentingController.present(alertController, animated: true)
+        }
     }
 }

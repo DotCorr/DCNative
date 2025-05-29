@@ -4,6 +4,7 @@ import '../types/component_types.dart' as types;
 /// DCFDropdown - Cross-platform dropdown menu component
 /// Provides native dropdown functionality with type-safe positioning and items
 class DCFDropdown extends StatelessComponent {
+  final bool visible;
   final List<types.DropdownMenuItem> items;
   final String? selectedValue;
   final String? placeholder;
@@ -27,6 +28,7 @@ class DCFDropdown extends StatelessComponent {
 
   DCFDropdown({
     super.key,
+    this.visible = false,
     this.items = const [],
     this.selectedValue,
     this.placeholder,
@@ -55,6 +57,7 @@ class DCFDropdown extends StatelessComponent {
       type: 'Dropdown',
       key: key,
       props: {
+        'visible': visible,
         'items': items.map((item) => {
           'value': item.value,
           'label': item.title,  // Use title as label for native

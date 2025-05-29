@@ -4,6 +4,7 @@ import '../types/component_types.dart';
 /// DCFContextMenu - Cross-platform context menu component
 /// Provides native context menu functionality with haptic feedback and preview
 class DCFContextMenu extends StatelessComponent {
+  final bool visible;
   final List<ContextMenuAction> actions;
   final ContextMenuPreviewType previewType;
   final String? previewBackgroundColor;
@@ -16,6 +17,7 @@ class DCFContextMenu extends StatelessComponent {
 
   DCFContextMenu({
     super.key,
+    this.visible = false,
     this.actions = const [],
     this.previewType = ContextMenuPreviewType.default_,
     this.previewBackgroundColor,
@@ -33,6 +35,7 @@ class DCFContextMenu extends StatelessComponent {
       type: 'ContextMenu',
       key: key,
       props: {
+        'visible': visible,
         'actions': actions.map((action) => action.toMap()).toList(),
         'previewType': previewType.name,
         'previewBackgroundColor': previewBackgroundColor,

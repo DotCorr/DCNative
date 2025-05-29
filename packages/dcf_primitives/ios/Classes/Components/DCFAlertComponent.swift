@@ -21,9 +21,12 @@ class DCFAlertComponent: NSObject, DCFComponent {
         // Apply StyleSheet properties
         placeholderView.applyStyles(props: props)
         
-        // Trigger alert presentation after a small delay
-        DispatchQueue.main.async {
-            self.presentAlert(props: props, placeholderView: placeholderView)
+        // Check if alert should be visible initially
+        if let visible = props["visible"] as? Bool, visible {
+            // Trigger alert presentation after a small delay
+            DispatchQueue.main.async {
+                self.presentAlert(props: props, placeholderView: placeholderView)
+            }
         }
         
         return placeholderView
@@ -33,8 +36,13 @@ class DCFAlertComponent: NSObject, DCFComponent {
         // Apply StyleSheet properties
         view.applyStyles(props: props)
         
-        // For alerts, updates mean presenting a new alert
-        presentAlert(props: props, placeholderView: view)
+        // Check visible prop to determine if alert should be shown
+        if let visible = props["visible"] as? Bool {
+            if visible {
+                presentAlert(props: props, placeholderView: view)
+            }
+            // Note: Alerts auto-dismiss, so no explicit hide needed
+        }
         return true
     }
     
@@ -74,6 +82,10 @@ class DCFAlertComponent: NSObject, DCFComponent {
                 }
                 
                 let action = UIAlertAction(title: text, style: style) { _ in
+                    // Convert style to string for event data
+                    let styleString = style == .destructive ? "destructive" : 
+                                     style == .cancel ? "cancel" : "default"
+                    
                     // Trigger callback with action data using proper event system
                     self.triggerEventIfRegistered(
                         placeholderView,
@@ -81,7 +93,7 @@ class DCFAlertComponent: NSObject, DCFComponent {
                         eventData: [
                             "actionIndex": actionData["index"] as? Int ?? 0,
                             "actionText": text,
-                            "actionStyle": styleString ?? "default"
+                            "actionStyle": styleString
                         ]
                     )
                 }

@@ -13,6 +13,8 @@ class DCFModalComponent: NSObject, DCFComponent {
         // Modal container view - this will hold the children when not visible
         let containerView = UIView()
         containerView.backgroundColor = UIColor.clear
+        containerView.isHidden = true  // Hide container so children are NEVER visible in main UI
+        containerView.clipsToBounds = true
         
         // Apply initial properties
         updateView(containerView, withProps: props)
@@ -107,11 +109,14 @@ class DCFModalComponent: NSObject, DCFComponent {
         }
     }
     
-        private func dismissModal(for view: UIView) {
+    private func dismissModal(for view: UIView) {
         guard let (modalViewController, modalView) = DCFModalComponent.activeModals[view] else { return }
         
-        // Move children back to container view before dismissing
-        moveChildrenFromModal(from: modalView, to: view)
+        // Hide modal children and ensure container stays hidden
+        hideModalChildren(from: modalView)
+        
+        // Ensure container view is hidden again
+        view.isHidden = true
         
         modalViewController.dismiss(animated: true) {
             // Clean up reference
@@ -129,17 +134,21 @@ class DCFModalComponent: NSObject, DCFComponent {
             child.removeFromSuperview()
             modalView.addSubview(child)
         }
+        
+        // Make the container visible now that children are moved to modal
+        containerView.isHidden = false
+        
         print("📱 Moved \(children.count) children to modal view")
     }
     
-    // Move children from modal view back to container view
-    private func moveChildrenFromModal(from modalView: UIView, to containerView: UIView) {
+    // Hide modal children and ensure container stays hidden
+    private func hideModalChildren(from modalView: UIView) {
         let children = modalView.subviews
         for child in children {
             child.removeFromSuperview()
-            containerView.addSubview(child)
+            // Children are completely removed - not moved back to main UI
         }
-        print("📱 Moved \(children.count) children back to container view")
+        print("📱 Hidden \(children.count) modal children (not moved to main UI)")
     }
     
     // Trigger event if the view has been registered for that event type

@@ -5,16 +5,8 @@ class DCFDrawerComponent: NSObject, DCFComponent {
     static let sharedInstance = DCFDrawerComponent()
     
     // Store event handlers for drawer views
-    static var drawerEventHandlers = [UIView: (String, [String], (String, String, [String: Any]) -> Void)]()
+    static var drawerEventHandlers: [UIView: (String, [String], (String, String, [String: Any]) -> Void)] = [:]
     
-    private static var activeDrawers: [UIView: DrawerViewController] = []
-    
-    required override init() {
-        super.init()
-    }Kit
-import dcflight
-
-class DCFDrawerComponent: NSObject, DCFComponent {
     private static var activeDrawers: [UIView: DrawerViewController] = [:]
     
     required override init() {
