@@ -12,6 +12,7 @@ class DCFModal extends StatelessComponent {
   final bool statusBarTranslucent;
   final String? backgroundColor;
   final bool hardwareAccelerated;
+  final double? borderRadius;
   final ModalHeaderOptions? header;
   final void Function()? onShow;
   final void Function()? onDismiss;
@@ -34,6 +35,7 @@ class DCFModal extends StatelessComponent {
     this.statusBarTranslucent = false,
     this.backgroundColor,
     this.hardwareAccelerated = false,
+    this.borderRadius,
     this.header,
     this.onShow,
     this.onDismiss,
@@ -73,14 +75,6 @@ class DCFModal extends StatelessComponent {
     if (onRightButtonPress != null) {
       eventMap['onRightButtonPress'] = onRightButtonPress;
     }
-    
-    if (onLeftButtonPress != null) {
-      eventMap['onLeftButtonPress'] = onLeftButtonPress;
-    }
-    
-    if (onRightButtonPress != null) {
-      eventMap['onRightButtonPress'] = onRightButtonPress;
-    }
 
     return DCFElement(
       type: 'Modal',
@@ -93,6 +87,7 @@ class DCFModal extends StatelessComponent {
         'statusBarTranslucent': statusBarTranslucent,
         if (backgroundColor != null) 'backgroundColor': backgroundColor,
         'hardwareAccelerated': hardwareAccelerated,
+        if (borderRadius != null) 'borderRadius': borderRadius,
         if (header != null) 'header': header!.toMap(),
         ...eventMap,
       },

@@ -14,6 +14,7 @@ class SimpleApp extends StatefulComponent {
       children: [
         DCFTextInput(
           value: textVal.value,
+          textColor: Colors.teal,
           onFocus: () => print("focused ${textVal.value}"),
           onBlur: () => print("blurred ${textVal.value}"),
           onChangeText: (v) {
@@ -43,10 +44,11 @@ class SimpleApp extends StatefulComponent {
         DCFModal(
           visible: modal.value,
           statusBarTranslucent: false,
-          presentationStyle: ModalPresentationStyle.formSheet,
+          presentationStyle: ModalPresentationStyle.pageSheet,
+          borderRadius: 100,
           header: ModalHeaderOptions(
             title: "Settings Modal",
-            titleColor: Colors.black,
+            titleColor: Colors.orange,
             fontSize: 18,
             fontWeight: "bold",
             leftButton: ModalHeaderButton(
@@ -123,6 +125,7 @@ class SimpleApp extends StatefulComponent {
                         backgroundColor: Colors.pink,
                       ),
                       value: textVal.value,
+                      textColor: Colors.amber,
                       onFocus:
                           () =>
                               print("modal textinput focused ${textVal.value}"),

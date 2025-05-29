@@ -79,6 +79,12 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
         // Apply StyleSheet properties
         modalView.applyStyles(props: props)
         
+        // Apply modal-specific border radius
+        if let borderRadius = props["borderRadius"] as? Double {
+            modalView.layer.cornerRadius = CGFloat(borderRadius)
+            modalView.layer.masksToBounds = true
+        }
+        
         // Handle modal-specific background properties
         if let transparent = props["transparent"] as? Bool, transparent {
             modalView.backgroundColor = UIColor.clear
@@ -168,7 +174,7 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
                 modalViewController.presentationController?.delegate = DCFModalComponent.sharedInstance
                 
                 // Trigger onShow event using same pattern as TouchableOpacity
-                self.triggerEvent(view: view, eventType: "onShow", eventData: [:])
+                self.triggerEvent(view, eventType: "onShow", eventData: [:])
             }
         }
     }
@@ -189,7 +195,7 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
             DCFModalComponent.activeModals.removeValue(forKey: view)
             
             // Trigger onDismiss event using same pattern as TouchableOpacity
-            self.triggerEvent(view: view, eventType: "onDismiss", eventData: [:])
+            self.triggerEvent(view, eventType: "onDismiss", eventData: [:])
         }
     }
     
@@ -223,22 +229,17 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
         print("📱 Moved \(children.count) children back to container view (stays hidden)")
     }
     
-    // Trigger event using the same pattern as TouchableOpacity - directly call callback
-    private func triggerEvent(view: UIView, eventType: String, eventData: [String: Any]) {
-        // Try to get callback using the registered event data
-        if let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void,
-           let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String,
-           let eventTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String] {
-            
-            if eventTypes.contains(eventType) {
-                print("✅ Triggering modal event: \(eventType) for view \(viewId)")
-                callback(viewId, eventType, eventData)
-            } else {
-                print("📱 Modal event \(eventType) not in registered types: \(eventTypes)")
-            }
-        } else {
-            print("📱 Modal event not registered - no handlers found for \(eventType)")
+    // Trigger event using direct callback pattern (same as TouchableOpacity and TextInput)
+    private func triggerEvent(_ view: UIView, eventType: String, eventData: [String: Any]) {
+        let key = "modal_callback_\(eventType)"
+        guard let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!) as? (String, String, [String: Any]) -> Void,
+              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "modal_viewId".hashValue)!) as? String else {
+            print("📱 Modal event \(eventType) not registered - no callback found")
+            return
         }
+        
+        print("✅ Triggering modal event: \(eventType) for view \(viewId)")
+        callback(viewId, eventType, eventData)
     }
     
     // MARK: - Event Handling Implementation
@@ -247,49 +248,31 @@ class DCFModalComponent: NSObject, DCFComponent, UIAdaptivePresentationControlle
                            eventCallback: @escaping (String, String, [String: Any]) -> Void) {
         print("📱 Adding modal event listeners to view \(viewId): \(eventTypes)")
         
-        // Store the event callback and view ID using associated objects
-        objc_setAssociatedObject(view,
-                                 UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!,
-                                 eventCallback,
-            .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        // Store individual callbacks for each event type using associated objects (same as TextInput)
+        for eventType in eventTypes {
+            let key = "modal_callback_\(eventType)"
+            objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, eventCallback, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
         
-        objc_setAssociatedObject(view,
-                                 UnsafeRawPointer(bitPattern: "viewId".hashValue)!,
-                                 viewId,
-            .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        // Store view ID for reference
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "modal_viewId".hashValue)!, viewId, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         
-        objc_setAssociatedObject(view,
-                                 UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
-                                 eventTypes,
-                                 .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-        
-        print("✅ Successfully registered modal event handlers for view \(viewId)")
+        print("✅ Successfully registered modal event handlers for view \(viewId): \(eventTypes)")
     }
     
     func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
         print("📱 Removing modal event listeners from view \(viewId): \(eventTypes)")
         
-        // Update the stored event types
-        if let existingTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String] {
-            var remainingTypes = existingTypes
-            for type in eventTypes {
-                if let index = remainingTypes.firstIndex(of: type) {
-                    remainingTypes.remove(at: index)
-                }
-            }
-            
-            if remainingTypes.isEmpty {
-                // Clean up all event data if no events remain
-                objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-                objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-                objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-                print("🧹 Cleared all modal event data for view \(viewId)")
-            } else {
-                // Store updated event types
-                objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, remainingTypes, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-                print("🔄 Updated modal event types for view \(viewId): \(remainingTypes)")
-            }
+        // Remove individual callbacks
+        for eventType in eventTypes {
+            let key = "modal_callback_\(eventType)"
+            objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
+        
+        // Remove view ID
+        objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "modal_viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("✅ Removed modal event handlers for view \(viewId)")
     }
 }
 
@@ -306,7 +289,7 @@ extension DCFModalComponent {
         ) as? UIView {
             
             // Trigger onRequestClose event
-            triggerEvent(view: containerView, eventType: "onRequestClose", eventData: [:])
+            triggerEvent(containerView, eventType: "onRequestClose", eventData: [:])
         }
         
         // Return false to prevent automatic dismissal - let Dart handle it
@@ -330,7 +313,7 @@ extension DCFModalComponent {
             }
             
             // Trigger onDismiss event
-            triggerEvent(view: containerView, eventType: "onDismiss", eventData: [:])
+            triggerEvent(containerView, eventType: "onDismiss", eventData: [:])
         }
     }
 }
@@ -451,13 +434,13 @@ extension DCFModalComponent {
               let isLeftButton = objc_getAssociatedObject(sender, UnsafeRawPointer(bitPattern: "isLeftButton".hashValue)!) as? Bool else { return }
         
         let eventType = isLeftButton ? "onLeftButtonPress" : "onRightButtonPress"
-        triggerEvent(view: containerView, eventType: eventType, eventData: [:])
+        triggerEvent(containerView, eventType: eventType, eventData: [:])
     }
     
     @objc private func defaultCloseButtonTapped(_ sender: UIBarButtonItem) {
         guard let containerView = objc_getAssociatedObject(sender, UnsafeRawPointer(bitPattern: "containerView".hashValue)!) as? UIView else { return }
         
         // Trigger close event - this will dismiss the modal
-        triggerEvent(view: containerView, eventType: "onRequestClose", eventData: [:])
+        triggerEvent(containerView, eventType: "onRequestClose", eventData: [:])
     }
 }

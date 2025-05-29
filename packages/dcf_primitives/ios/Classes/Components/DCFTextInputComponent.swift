@@ -59,8 +59,13 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         if let placeholderColor = props["placeholderTextColor"] as? String {
             textField.attributedPlaceholder = NSAttributedString(
                 string: textField.placeholder ?? "",
-                attributes: [NSAttributedString.Key.foregroundColor: ColorUtilities.color(fromHexString: placeholderColor)]
+                attributes: [NSAttributedString.Key.foregroundColor: ColorUtilities.color(fromHexString: placeholderColor) ?? UIColor.placeholderText]
             )
+        }
+        
+        // Update text color
+        if let textColor = props["textColor"] as? String {
+            textField.textColor = ColorUtilities.color(fromHexString: textColor)
         }
         
         // Update keyboard type
@@ -129,9 +134,14 @@ class DCFTextInputComponent: NSObject, DCFComponent, UITextFieldDelegate, UIText
         if let autoCorrect = props["autoCorrect"] as? Bool {
             textView.autocorrectionType = autoCorrect ? .yes : .no
         }
-         // Update editable state
+        // Update editable state
         if let editable = props["editable"] as? Bool {
             textView.isEditable = editable
+        }
+        
+        // Update text color
+        if let textColor = props["textColor"] as? String {
+            textView.textColor = ColorUtilities.color(fromHexString: textColor)
         }
         
         // Apply StyleSheet properties for TextView
