@@ -5,7 +5,7 @@ import '../types/component_types.dart' as types;
 /// Provides ultra-fast scrolling with component recycling and smart rendering
 class DCFFlatList<T> extends StatelessComponent {
   final List<T> data;
-  final DCFElement Function(T item, int index) renderItem;
+  final DCFComponentNode Function(T item, int index) renderItem;
   final String Function(T item, int index)? getItemType;
   final double? estimatedItemSize;
   final types.ListItemConfig Function(T item, int index)? getItemLayout;
@@ -33,12 +33,12 @@ class DCFFlatList<T> extends StatelessComponent {
   final double? onEndReachedThreshold;
   final void Function()? onRefresh;
   final bool refreshing;
-  final DCFElement? refreshControl;
-  final DCFElement? header;
-  final DCFElement? footer;
-  final DCFElement? empty;
-  final DCFElement? separator;
-  final DCFElement Function(int index)? stickyHeaderIndices;
+  final DCFComponentNode? refreshControl;
+  final DCFComponentNode? header;
+  final DCFComponentNode? footer;
+  final DCFComponentNode? empty;
+  final DCFComponentNode? separator;
+  final DCFComponentNode Function(int index)? stickyHeaderIndices;
   final void Function(Map<String, dynamic>)? onScroll;
   final void Function()? onScrollBeginDrag;
   final void Function()? onScrollEndDrag;
@@ -90,7 +90,7 @@ class DCFFlatList<T> extends StatelessComponent {
   });
 
   @override
-  DCFElement render() {
+  DCFComponentNode render() {
     return DCFElement(
       type: 'FlatList',
       key: key,
@@ -136,8 +136,8 @@ class DCFFlatList<T> extends StatelessComponent {
     );
   }
 
-  List<DCFElement> _buildListChildren() {
-    final children = <DCFElement>[];
+  List<DCFComponentNode> _buildListChildren() {
+    final children = <DCFComponentNode>[];
     
     // Add header if provided
     if (header != null) {

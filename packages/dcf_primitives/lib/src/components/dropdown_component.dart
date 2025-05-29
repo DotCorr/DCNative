@@ -50,7 +50,7 @@ class DCFDropdown extends StatelessComponent {
   });
 
   @override
-  DCFElement render() {
+  DCFComponentNode render() {
     return DCFElement(
       type: 'Dropdown',
       key: key,

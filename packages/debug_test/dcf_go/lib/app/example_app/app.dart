@@ -8,6 +8,9 @@ class ExampleApp extends StatefulComponent {
   DCFComponentNode render() {
     final infoModal = useState(false);
     final alert = useState(false);
+    final contextMenu = useState(false);
+    final textInput = useState("Search");
+    final dropdownValue = useState("Option 1");
 
     useEffect(() {
       // This effect runs once when the component is mounted
@@ -34,6 +37,28 @@ class ExampleApp extends StatefulComponent {
       
        DCFModal(
           visible: infoModal.value,
+          children: [
+            DCFView(
+              layout: LayoutProps(
+                flex: 1,
+                justifyContent: YogaJustifyContent.center,
+                alignItems: YogaAlign.center,
+              ),
+              children: [
+                DCFText(
+                  content: "This is a modal",
+                  textProps: TextProps(fontSize: 20, fontWeight: 'bold'),
+                ),
+                DCFButton(
+                  buttonProps: ButtonProps(title: "Close Modal"),
+                  onPress: (v) {
+                    infoModal.setValue(false);
+                    print("Modal closed");
+                  },
+                ),
+              ],
+            ),
+          ],
           statusBarTranslucent: true,
           onDismiss: () {
             infoModal.setValue(!infoModal.value);
@@ -63,6 +88,18 @@ class ExampleApp extends StatefulComponent {
           onPress: (v) {
             alert.setValue(!infoModal.value);
             print("Modal button pressed, alert set to ${alert.value}");
+          },
+        ),
+        DCFContextMenu(
+          children: [
+          
+          ]
+        ),
+        DCFButton(
+          buttonProps: ButtonProps(title: "Show Conntext Menu"),
+          onPress: (v) {
+            contextMenu.setValue(!infoModal.value);
+         
           },
         ),
         ],

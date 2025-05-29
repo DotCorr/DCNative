@@ -88,7 +88,7 @@ class DCFTextInput extends StatelessComponent {
   });
 
   @override
-  DCFElement render() {
+  DCFComponentNode render() {
     final events = <String, dynamic>{};
     if (onChangeText != null) events['onChangeText'] = onChangeText;
     if (onFocus != null) events['onFocus'] = onFocus;

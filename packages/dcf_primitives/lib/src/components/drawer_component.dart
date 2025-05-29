@@ -24,8 +24,8 @@ class DCFDrawer extends StatelessComponent {
   final void Function()? onDrawerClose;
   final void Function(double)? onDrawerSlide;
   final void Function()? onDrawerStateChanged;
-  final DCFElement? drawerContent;
-  final List<DCFElement> children;
+  final DCFComponentNode? drawerContent;
+  final List<DCFComponentNode> children;
 
   DCFDrawer({
     super.key,
@@ -54,8 +54,8 @@ class DCFDrawer extends StatelessComponent {
   });
 
   @override
-  DCFElement render() {
-    final childElements = <DCFElement>[];
+  DCFComponentNode render() {
+    final childElements = <DCFComponentNode>[];
     if (drawerContent != null) childElements.add(drawerContent!);
     childElements.addAll(children);
 

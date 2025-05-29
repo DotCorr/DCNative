@@ -12,7 +12,7 @@ class DCFContextMenu extends StatelessComponent {
   final void Function(ContextMenuAction)? onPress;
   final void Function()? onCancel;
   final void Function()? onPreviewTap;
-  final List<DCFElement> children;
+  final List<DCFComponentNode> children;
 
   DCFContextMenu({
     super.key,
