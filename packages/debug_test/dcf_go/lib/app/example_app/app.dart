@@ -89,10 +89,15 @@ class ExampleApp extends StatefulComponent {
             alert.setValue(!infoModal.value);
             print("Modal button pressed, alert set to ${alert.value}");
           },
+        
         ),
+        
+       if(contextMenu.value)
         DCFContextMenu(
           children: [
-          
+         DCFText(content: "Context Menu Item 1"),
+         DCFText(content: "Context Menu Item 2"),
+         DCFText(content: "Context Menu Item 3"),
           ]
         ),
         DCFButton(

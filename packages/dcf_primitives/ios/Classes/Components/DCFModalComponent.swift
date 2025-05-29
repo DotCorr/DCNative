@@ -2,14 +2,15 @@ import UIKit
 import dcflight
 
 class DCFModalComponent: NSObject, DCFComponent {
-    private static var activeModals: [UIView: UIViewController] = [:]
+    private static var activeModals: [UIView: (UIViewController, UIView)] = [:]
+    private static let sharedInstance = DCFModalComponent()
     
     required override init() {
         super.init()
     }
     
     func createView(props: [String: Any]) -> UIView {
-        // Modal container view
+        // Modal container view - this will hold the children when not visible
         let containerView = UIView()
         containerView.backgroundColor = UIColor.clear
         
@@ -83,8 +84,11 @@ class DCFModalComponent: NSObject, DCFComponent {
             }
         }
         
-        // Store reference
-        DCFModalComponent.activeModals[view] = modalViewController
+        // Store reference to both modal controller and its view
+        DCFModalComponent.activeModals[view] = (modalViewController, modalView)
+        
+        // Move children from container view to modal view
+        moveChildrenToModal(from: view, to: modalView)
         
         // Present modal
         if let topViewController = UIApplication.shared.windows.first?.rootViewController {
@@ -94,29 +98,112 @@ class DCFModalComponent: NSObject, DCFComponent {
             }
             
             presentingController.present(modalViewController, animated: true) {
-                // Trigger onShow event
-                self.triggerEvent(view: view, eventType: "onShow", data: [:])
+                // Trigger onShow event using proper event system
+                self.triggerEventIfRegistered(view: view, eventType: "onShow", eventData: [:])
             }
         }
     }
     
-    private func dismissModal(for view: UIView) {
-        guard let modalViewController = DCFModalComponent.activeModals[view] else { return }
+        private func dismissModal(for view: UIView) {
+        guard let (modalViewController, modalView) = DCFModalComponent.activeModals[view] else { return }
+        
+        // Move children back to container view before dismissing
+        moveChildrenFromModal(from: modalView, to: view)
         
         modalViewController.dismiss(animated: true) {
             // Clean up reference
             DCFModalComponent.activeModals.removeValue(forKey: view)
             
-            // Trigger onDismiss event
-            self.triggerEvent(view: view, eventType: "onDismiss", data: [:])
+            // Trigger onDismiss event using proper event system
+            self.triggerEventIfRegistered(view: view, eventType: "onDismiss", eventData: [:])
         }
     }
     
-    private func triggerEvent(view: UIView, eventType: String, data: [String: Any]) {
-        self.triggerEvent(
-            on: view,
-            eventType: eventType,
-            eventData: data
-        )
+    // Move children from container view to modal view
+    private func moveChildrenToModal(from containerView: UIView, to modalView: UIView) {
+        let children = containerView.subviews
+        for child in children {
+            child.removeFromSuperview()
+            modalView.addSubview(child)
+        }
+        print("📱 Moved \(children.count) children to modal view")
+    }
+    
+    // Move children from modal view back to container view
+    private func moveChildrenFromModal(from modalView: UIView, to containerView: UIView) {
+        let children = modalView.subviews
+        for child in children {
+            child.removeFromSuperview()
+            containerView.addSubview(child)
+        }
+        print("📱 Moved \(children.count) children back to container view")
+    }
+    
+    // Trigger event if the view has been registered for that event type
+    private func triggerEventIfRegistered(view: UIView, eventType: String, eventData: [String: Any]) {
+        guard let eventTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String],
+              let callback = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!) as? (String, String, [String: Any]) -> Void,
+              let viewId = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!) as? String else {
+            print("📱 Modal event not registered - no handlers found for \(eventType)")
+            return
+        }
+        
+        if eventTypes.contains(eventType) {
+            print("✅ Triggering modal event: \(eventType)")
+            callback(viewId, eventType, eventData)
+        } else {
+            print("📱 Modal event \(eventType) not in registered types: \(eventTypes)")
+        }
+    }
+    
+    // MARK: - Event Handling Implementation
+    
+    func addEventListeners(to view: UIView, viewId: String, eventTypes: [String], 
+                          eventCallback: @escaping (String, String, [String: Any]) -> Void) {
+        print("📱 Adding modal event listeners to view \(viewId): \(eventTypes)")
+        
+        // Store the event callback and view ID using associated objects
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, 
+                               eventCallback, 
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "viewId".hashValue)!, 
+                               viewId, 
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        objc_setAssociatedObject(view, 
+                               UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!,
+                               eventTypes,
+                               .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        
+        print("✅ Successfully registered modal event handlers for view \(viewId)")
+    }
+    
+    func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
+        print("📱 Removing modal event listeners from view \(viewId): \(eventTypes)")
+        
+        // Update the stored event types
+        if let existingTypes = objc_getAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!) as? [String] {
+            var remainingTypes = existingTypes
+            for type in eventTypes {
+                if let index = remainingTypes.firstIndex(of: type) {
+                    remainingTypes.remove(at: index)
+                }
+            }
+            
+            if remainingTypes.isEmpty {
+                // Clean up all event data if no events remain
+                objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                print("🧹 Cleared all modal event data for view \(viewId)")
+            } else {
+                // Store updated event types
+                objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventTypes".hashValue)!, remainingTypes, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+                print("🔄 Updated modal event types for view \(viewId): \(remainingTypes)")
+            }
+        }
     }
 }
