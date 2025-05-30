@@ -33,8 +33,27 @@ abstract class StatefulComponent extends DCFComponentNode {
   /// Create a stateful component
   StatefulComponent({super.key})
       : instanceId = '${DateTime.now().millisecondsSinceEpoch}.${Random().nextDouble()}',
-        typeName = StackTrace.current.toString().split('\n')[1].split(' ')[0] {
+        typeName = _extractTypeName() {
     scheduleUpdate = _defaultScheduleUpdate;
+  }
+
+  /// Extract the component type name from the class
+  static String _extractTypeName() {
+    // Get the class name directly using runtimeType would be better, but
+    // this works in the constructor. We'll use runtime type in a better way.
+    final stackTrace = StackTrace.current.toString();
+    final lines = stackTrace.split('\n');
+    
+    // Look for the first line that doesn't contain constructor calls
+    for (final line in lines.skip(1)) {
+      final match = RegExp(r'(\w+Component)').firstMatch(line);
+      if (match != null) {
+        return match.group(1)!;
+      }
+    }
+    
+    // Fallback to a generic name
+    return 'UnknownComponent';
   }
 
   /// Default no-op schedule update function (replaced by VDOM)
@@ -163,7 +182,7 @@ abstract class StatefulComponent extends DCFComponentNode {
   /// Create a store hook for global state
   StoreHook<T> useStore<T>(Store<T> store) {
     if (_hookIndex >= _hooks.length) {
-      // Create new hook with update protection
+      // Create new hook with update protection and component tracking
       final hook = StoreHook<T>(store, () {
         // Only schedule update if component is mounted and not already updating
         if (_isMounted && !_isUpdating) {
@@ -174,7 +193,7 @@ abstract class StatefulComponent extends DCFComponentNode {
             _isUpdating = false;
           });
         }
-      });
+      }, instanceId, typeName);
       _hooks.add(hook);
     }
     
@@ -196,7 +215,7 @@ abstract class StatefulComponent extends DCFComponentNode {
             _isUpdating = false;
           });
         }
-      });
+      }, instanceId, typeName);
       _hooks[_hookIndex] = newHook;
       _hookIndex++;
       return newHook;

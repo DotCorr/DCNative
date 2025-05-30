@@ -150,6 +150,10 @@ class StoreHook<T> extends Hook {
   /// The store
   final Store<T> _store;
   
+  /// Component information for tracking
+  final String? _componentId;
+  final String? _componentType;
+  
   /// Get the store (for hook validation)
   Store<T> get store => _store;
   
@@ -166,7 +170,12 @@ class StoreHook<T> extends Hook {
   bool _updatePending = false;
 
   /// Create a store hook
-  StoreHook(this._store, this._onChange) {
+  StoreHook(this._store, this._onChange, [this._componentId, this._componentType]) {
+    // Track hook access for usage validation
+    if (_componentId != null && _componentType != null) {
+      _store.trackHookAccess(_componentId, _componentType);
+    }
+    
     // Create listener function that triggers component update with debouncing
     _listener = (T _) {
       // Prevent multiple rapid-fire updates by debouncing

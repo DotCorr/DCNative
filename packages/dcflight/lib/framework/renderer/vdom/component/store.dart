@@ -1,27 +1,56 @@
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 
-/// A store for global state management
+/// Component access tracking for store usage validation
+class _ComponentAccess {
+  final String componentId;
+  final String componentType;
+  final bool usedViaHook;
+  final DateTime accessTime;
+  
+  _ComponentAccess({
+    required this.componentId,
+    required this.componentType,
+    required this.usedViaHook,
+    required this.accessTime,
+  });
+}
+
+/// A store for global state management with usage pattern validation
 class Store<T> {
   /// The current state
   T _state;
 
   /// List of listeners to notify on state change
   final List<void Function(T)> _listeners = [];
+  
+  /// Track component access patterns for validation
+  final Map<String, _ComponentAccess> _componentAccess = {};
+  
+  /// Track if store has been accessed inconsistently
+  bool _hasInconsistentUsage = false;
 
   /// Create a store with initial state
   Store(this._state);
 
-  /// Get the current state
-  T get state => _state;
+  /// Get the current state (with usage tracking)
+  T get state {
+    _trackDirectAccess();
+    return _state;
+  }
 
   /// Update the state
   void setState(T newState) {
+    _trackDirectAccess();
+    
     // Skip update if state is identical (for references) or equal (for values)
     if (identical(_state, newState) || _state == newState) {
       return;
     }
 
-    developer.log('Store updated: from $_state to $newState', name: 'Store');
+    if (kDebugMode) {
+      developer.log('Store updated: from $_state to $newState', name: 'Store');
+    }
 
     // Update state
     _state = newState;
@@ -32,17 +61,166 @@ class Store<T> {
 
   /// Update the state using a function
   void updateState(T Function(T) updater) {
+    _trackDirectAccess();
     setState(updater(_state));
   }
 
-  /// Register a listener
+  /// Register a listener (used by hooks)
   void subscribe(void Function(T) listener) {
     // Prevent duplicate listeners for the same function
     if (!_listeners.contains(listener)) {
       _listeners.add(listener);
-      developer.log('Store listener added. Total listeners: ${_listeners.length}', name: 'Store');
+      if (kDebugMode) {
+        developer.log('Store listener added. Total listeners: ${_listeners.length}', name: 'Store');
+      }
     } else {
-      developer.log('Duplicate listener prevented', name: 'Store');
+      if (kDebugMode) {
+        developer.log('Duplicate listener prevented', name: 'Store');
+      }
+    }
+  }
+
+  /// Track hook-based access (called from StoreHook)
+  void trackHookAccess(String componentId, String componentType) {
+    final access = _ComponentAccess(
+      componentId: componentId,
+      componentType: componentType,
+      usedViaHook: true,
+      accessTime: DateTime.now(),
+    );
+    
+    final existingAccess = _componentAccess[componentId];
+    if (existingAccess != null && !existingAccess.usedViaHook) {
+      _warnInconsistentUsage(componentId, componentType, 'switched from direct access to hook');
+    }
+    
+    _componentAccess[componentId] = access;
+  }
+
+  /// Track direct access (when .state or .setState is called directly)
+  void _trackDirectAccess() {
+    if (!kDebugMode) return;
+    
+    // Get current component from stack trace
+    final stackTrace = StackTrace.current;
+    final componentInfo = _extractComponentFromStackTrace(stackTrace);
+    
+    if (componentInfo != null) {
+      final (componentId, componentType) = componentInfo;
+      
+      final access = _ComponentAccess(
+        componentId: componentId,
+        componentType: componentType,
+        usedViaHook: false,
+        accessTime: DateTime.now(),
+      );
+      
+      final existingAccess = _componentAccess[componentId];
+      if (existingAccess != null && existingAccess.usedViaHook) {
+        _warnInconsistentUsage(componentId, componentType, 'switched from hook to direct access');
+      }
+      
+      _componentAccess[componentId] = access;
+      
+      // Check for mixed usage patterns across components
+      _validateUsagePatterns();
+    }
+  }
+
+  /// Extract component information from stack trace
+  (String, String)? _extractComponentFromStackTrace(StackTrace stackTrace) {
+    final lines = stackTrace.toString().split('\n');
+    
+    for (final line in lines) {
+      // Look for component render methods, build methods, or component class patterns
+      if (line.contains('.render') || 
+          line.contains('.build') || 
+          line.contains('Component.') ||
+          line.contains('.setState') ||
+          line.contains('.state')) {
+        
+        // Extract component type from various patterns
+        final patterns = [
+          RegExp(r'(\w+Component)\.'),  // SomeComponent.method
+          RegExp(r'(\w+Component)\s'),  // SomeComponent space
+          RegExp(r'/(\w+Component)'),   // /SomeComponent in path
+        ];
+        
+        for (final pattern in patterns) {
+          final match = pattern.firstMatch(line);
+          if (match != null) {
+            final componentType = match.group(1)!;
+            // Create a simple ID based on component type and current time
+            final componentId = '${componentType}_${_componentIdCounter++}';
+            return (componentId, componentType);
+          }
+        }
+      }
+    }
+    return null;
+  }
+  
+  /// Counter for generating unique component IDs
+  static int _componentIdCounter = 0;
+
+  /// Warn about inconsistent usage patterns
+  void _warnInconsistentUsage(String componentId, String componentType, String reason) {
+    if (_hasInconsistentUsage) return; // Only warn once
+    
+    _hasInconsistentUsage = true;
+    
+    developer.log(
+      '''
+⚠️  STORE USAGE INCONSISTENCY DETECTED ⚠️
+Component: $componentType ($componentId)
+Issue: $reason
+
+RECOMMENDATION:
+Choose ONE consistent pattern for ALL stores in your component:
+
+✅ RECOMMENDED - Use hooks for reactive updates:
+  final myStore = useStore(myStoreInstance);
+  myStore.state        // Get value
+  myStore.setState()   // Update value
+
+❌ AVOID - Direct access (no automatic re-renders):
+  myStoreInstance.state        // Get value
+  myStoreInstance.setState()   // Update value
+
+Mixed patterns can cause confusing bugs where some UI updates work and others don't.
+      ''',
+      name: 'StoreUsageValidator'
+    );
+  }
+
+  /// Validate usage patterns across all components
+  void _validateUsagePatterns() {
+    final hookComponents = <String>[];
+    final directComponents = <String>[];
+    
+    for (final entry in _componentAccess.entries) {
+      if (entry.value.usedViaHook) {
+        hookComponents.add(entry.value.componentType);
+      } else {
+        directComponents.add(entry.value.componentType);
+      }
+    }
+    
+    if (hookComponents.isNotEmpty && directComponents.isNotEmpty && !_hasInconsistentUsage) {
+      _hasInconsistentUsage = true;
+      
+      developer.log(
+        '''
+⚠️  MIXED STORE USAGE PATTERNS DETECTED ⚠️
+
+Components using hooks: ${hookComponents.join(', ')}
+Components using direct access: ${directComponents.join(', ')}
+
+RECOMMENDATION:
+Use hooks (useStore) in ALL components for consistent reactive behavior.
+        ''',
+        name: 'StoreUsageValidator'
+      );
     }
   }
 
