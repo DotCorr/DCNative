@@ -7,8 +7,10 @@ class SampleModal extends StatefulComponent {
  
   @override
   render() {
-    // Use the useStore hook instead of direct access
+    // Use hooks consistently for ALL stores this component needs
     final modalStoreHook = useStore(modalStore);
+    final textValStoreHook = useStore(textValStore);
+    final bgStoreHook = useStore(bgStore);
     
     return DCFModal(
       visible: modalStoreHook.state,
@@ -89,14 +91,14 @@ class SampleModal extends StatefulComponent {
                     borderWidth: 0,
                     backgroundColor: Colors.pink,
                   ),
-                  value: textValStore.state,
+                  value: textValStoreHook.state, // Use hook consistently
                   textColor: Colors.amber,
                   onFocus:
-                      () => print("modalStore textinput focused ${textValStore.state}"),
+                      () => print("modalStore textinput focused ${textValStoreHook.state}"),
                   onBlur:
-                      () => print("modalStore textinput blurred ${textValStore.state}"),
+                      () => print("modalStore textinput blurred ${textValStoreHook.state}"),
                   onChangeText: (v) {
-                    textValStore.setState(v);
+                    textValStoreHook.setState(v); // Use hook consistently
                     print("modalStore textinput changed $v");
                   },
                 );
@@ -106,13 +108,13 @@ class SampleModal extends StatefulComponent {
             DCFButton(
               buttonProps: ButtonProps(title: "BG Color change"),
               onPress: (v) {
-                bgStore.setState(Colors.amber);
+                bgStoreHook.setState(Colors.amber); // Use hook consistently
               },
             ),
             DCFButton(
               buttonProps: ButtonProps(title: "Close"),
               onPress: (v) {
-                modalStore.setState(false);
+                modalStoreHook.setState(false); // Use hook consistently
               },
             ),
           ],

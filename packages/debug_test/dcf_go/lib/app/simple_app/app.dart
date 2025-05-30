@@ -1,13 +1,11 @@
-
 import 'package:dcf_go/app/simple_app/modal.dart';
 import 'package:dcf_primitives/dcf_primitives.dart';
 import 'package:dcflight/dcflight.dart';
 
+final modalStore = Store<bool>(false);
+final textValStore = Store<String>("text");
+final bgStore = Store<Color>(Colors.white);
 
-
-    final modalStore = Store<bool>(false);
-    final textValStore = Store<String>("text");
-    final bgStore = Store<Color>(Colors.white);
 class SimpleApp extends StatefulComponent {
   @override
   DCFComponentNode render() {
@@ -49,7 +47,7 @@ class SimpleApp extends StatefulComponent {
           },
         ),
         // Triggerbles
-       SampleModal()
+        SampleModal(),
       ],
     );
   }
