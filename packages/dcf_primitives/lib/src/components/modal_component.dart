@@ -1,3 +1,4 @@
+import 'package:dcf_primitives/src/components/view_component.dart';
 import 'package:dcflight/dcflight.dart';
 import '../types/component_types.dart';
 
@@ -5,6 +6,7 @@ import '../types/component_types.dart';
 /// Provides native modal functionality with type-safe presentation styles
 class DCFModal extends StatelessComponent {
   final bool visible;
+  final StyleSheet? style;
   final ModalPresentationStyle presentationStyle;
   final ModalTransitionStyle transitionStyle;
   final bool animationType;
@@ -14,6 +16,8 @@ class DCFModal extends StatelessComponent {
   final bool hardwareAccelerated;
   final double? borderRadius;
   final ModalHeaderOptions? header;
+  final ModalSheetConfiguration? sheetConfiguration;
+  final bool isDismissible;
   final void Function()? onShow;
   final void Function()? onDismiss;
   final void Function()? onRequestClose;
@@ -28,6 +32,7 @@ class DCFModal extends StatelessComponent {
   DCFModal({
     super.key,
     this.visible = false,
+    this.style,
     this.presentationStyle = ModalPresentationStyle.formSheet,
     this.transitionStyle = ModalTransitionStyle.coverVertical,
     this.animationType = true,
@@ -37,6 +42,8 @@ class DCFModal extends StatelessComponent {
     this.hardwareAccelerated = false,
     this.borderRadius,
     this.header,
+    this.sheetConfiguration,
+    this.isDismissible = true,
     this.onShow,
     this.onDismiss,
     this.onRequestClose,
@@ -51,27 +58,27 @@ class DCFModal extends StatelessComponent {
   DCFComponentNode render() {
     // Create an events map for callbacks
     Map<String, dynamic> eventMap = events ?? {};
-    
+
     if (onShow != null) {
       eventMap['onShow'] = onShow;
     }
-    
+
     if (onDismiss != null) {
       eventMap['onDismiss'] = onDismiss;
     }
-    
+
     if (onRequestClose != null) {
       eventMap['onRequestClose'] = onRequestClose;
     }
-    
+
     if (onOrientationChange != null) {
       eventMap['onOrientationChange'] = onOrientationChange;
     }
-    
+
     if (onLeftButtonPress != null) {
       eventMap['onLeftButtonPress'] = onLeftButtonPress;
     }
-    
+
     if (onRightButtonPress != null) {
       eventMap['onRightButtonPress'] = onRightButtonPress;
     }
@@ -89,9 +96,17 @@ class DCFModal extends StatelessComponent {
         'hardwareAccelerated': hardwareAccelerated,
         if (borderRadius != null) 'borderRadius': borderRadius,
         if (header != null) 'header': header!.toMap(),
+        if (sheetConfiguration != null) 'sheetConfiguration': sheetConfiguration!.toMap(),
+        'isDismissible': isDismissible,
         ...eventMap,
       },
-      children: children,
+      children: [
+        DCFView(
+          style: style ?? StyleSheet(),
+          layout: LayoutProps(flex: 1, height: "100%", width: "100%"),
+          children: children,
+        )
+      ],
     );
   }
 }

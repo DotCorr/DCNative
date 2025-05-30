@@ -399,3 +399,38 @@ class EdgeInsets {
     };
   }
 }
+
+/// Modal sheet configuration for iOS 15+ features
+class ModalSheetConfiguration {
+  final List<String>? detents;
+  final String? selectedDetent;
+  final bool isDismissible;
+  final bool showDragIndicator;
+  final bool prefersScrollingExpandsWhenScrolledToEdge;
+  final bool prefersEdgeAttachedInCompactHeight;
+  final double? customDetentHeight;
+
+  const ModalSheetConfiguration({
+    this.detents,
+    this.selectedDetent,
+    this.isDismissible = true,
+    this.showDragIndicator = true,
+    this.prefersScrollingExpandsWhenScrolledToEdge = true,
+    this.prefersEdgeAttachedInCompactHeight = true,
+    this.customDetentHeight,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      if (detents != null) 'detents': detents,
+      if (selectedDetent != null) 'selectedDetent': selectedDetent,
+      'isDismissible': isDismissible,
+      'showDragIndicator': showDragIndicator,
+      'prefersScrollingExpandsWhenScrolledToEdge': prefersScrollingExpandsWhenScrolledToEdge,
+      'prefersEdgeAttachedInCompactHeight': prefersEdgeAttachedInCompactHeight,
+      if (customDetentHeight != null) 'customDetentHeight': customDetentHeight,
+    };
+  }
+}
+
+/// Modal header options
