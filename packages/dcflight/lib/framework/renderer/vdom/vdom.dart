@@ -167,36 +167,10 @@ class VDom {
       registerComponent(component);
     }
     
-    // Add to the pending updates queue
+    // Only add this specific component to the update queue
+    // Don't cascade to parent components to prevent infinite loops
     _pendingUpdates.add(component.instanceId);
     
-    // Find the root component from this component
-    DCFComponentNode? rootComponentCandidate = component;
-    while (rootComponentCandidate != null && rootComponentCandidate.parent != null) {
-      rootComponentCandidate = rootComponentCandidate.parent;
-    }
-    
-    // If this is a top-level fragment, make sure the entire app updates
-    if (rootComponent != null && rootComponentCandidate == rootComponent) {
-      if (kDebugMode) {
-        print('Adding global app update to ensure full reconciliation');
-      }
-    }
-    
-    // Add the direct container component to ensure proper reconciliation
-    DCFComponentNode? parent = component.parent;
-    while (parent != null) {
-      // Update parent components to propagate the changes up the tree
-      if (parent is StatefulComponent) {
-        if (kDebugMode) {
-          print('  Adding parent component to update queue: ${parent.instanceId} (${parent.runtimeType})');
-        }
-        _pendingUpdates.add(parent.instanceId);
-      } 
-      // Continue walking up the tree to find all affected components
-      parent = parent.parent;
-    }
-
     // Only schedule a new update if one isn't already scheduled
     if (!_isUpdateScheduled) {
       _isUpdateScheduled = true;

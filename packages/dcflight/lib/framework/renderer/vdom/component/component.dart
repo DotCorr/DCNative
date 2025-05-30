@@ -91,8 +91,6 @@ abstract class StatefulComponent extends DCFComponentNode {
     // Clean up any remaining store subscriptions via StoreManager
     // This is a safety net in case hooks didn't clean up properly
     try {
-      // Import StoreManager dynamically to avoid circular imports
-      final storeManagerType = 'StoreManager';
       if (kDebugMode) {
         print('Cleaning up store subscriptions for component $instanceId');
       }
@@ -165,7 +163,7 @@ abstract class StatefulComponent extends DCFComponentNode {
   /// Create a store hook for global state
   StoreHook<T> useStore<T>(Store<T> store) {
     if (_hookIndex >= _hooks.length) {
-      // Create new hook with proper component tracking
+      // Create new hook with update protection
       final hook = StoreHook<T>(store, () {
         // Only schedule update if component is mounted and not already updating
         if (_isMounted && !_isUpdating) {
@@ -176,7 +174,7 @@ abstract class StatefulComponent extends DCFComponentNode {
             _isUpdating = false;
           });
         }
-      }, instanceId); // Pass component ID for tracking
+      });
       _hooks.add(hook);
     }
     
@@ -198,7 +196,7 @@ abstract class StatefulComponent extends DCFComponentNode {
             _isUpdating = false;
           });
         }
-      }, instanceId); // Pass component ID for tracking
+      });
       _hooks[_hookIndex] = newHook;
       _hookIndex++;
       return newHook;

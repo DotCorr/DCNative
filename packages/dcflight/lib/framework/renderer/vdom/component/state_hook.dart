@@ -1,7 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:flutter/foundation.dart';
 import 'store.dart';
-import 'store_manager.dart';
 
 /// Base hook class for all hook types
 abstract class Hook {
@@ -146,7 +145,7 @@ class RefHook<T> extends Hook {
   }
 }
 
-/// Store hook for connecting to global state with proper lifecycle management
+/// Store hook for connecting to global state
 class StoreHook<T> extends Hook {
   /// The store
   final Store<T> _store;
@@ -154,26 +153,42 @@ class StoreHook<T> extends Hook {
   /// Get the store (for hook validation)
   Store<T> get store => _store;
   
-  /// Component ID for tracking subscriptions
-  final String _componentId;
+  /// State change callback
+  final Function() _onChange;
   
-  /// Whether we're managed by StoreManager
-  bool _isManagedByStoreManager = false;
+  /// Listener function reference for unsubscribing
+  late final void Function(T) _listener;
+  
+  /// Flag to track if we're subscribed to prevent double subscription
+  bool _isSubscribed = false;
+  
+  /// Debounce flag to prevent multiple rapid updates
+  bool _updatePending = false;
 
-  /// Create a store hook with proper lifecycle management
-  StoreHook(this._store, Function() onChange, this._componentId) {
-    // Use StoreManager for centralized subscription management
-    if (!StoreManager.instance.isComponentSubscribed(_componentId, _store)) {
-      StoreManager.instance.subscribeComponent(_componentId, _store, onChange);
-      _isManagedByStoreManager = true;
+  /// Create a store hook
+  StoreHook(this._store, this._onChange) {
+    // Create listener function that triggers component update with debouncing
+    _listener = (T _) {
+      // Prevent multiple rapid-fire updates by debouncing
+      if (_updatePending) {
+        return;
+      }
       
-      if (kDebugMode) {
-        developer.log('StoreHook created and managed for component $_componentId', name: 'StoreHook');
-      }
-    } else {
-      if (kDebugMode) {
-        developer.log('Component $_componentId already subscribed to store - reusing subscription', name: 'StoreHook');
-      }
+      _updatePending = true;
+      
+      // Use microtask to batch multiple store updates together
+      Future.microtask(() {
+        if (_updatePending && _isSubscribed) {
+          _updatePending = false;
+          _onChange();
+        }
+      });
+    };
+    
+    // Subscribe to store changes only once
+    if (!_isSubscribed) {
+      _store.subscribe(_listener);
+      _isSubscribed = true;
     }
   }
 
@@ -192,14 +207,11 @@ class StoreHook<T> extends Hook {
 
   @override
   void dispose() {
-    // Only unsubscribe if we're the managing hook
-    if (_isManagedByStoreManager) {
-      StoreManager.instance.unsubscribeComponentFromStore(_componentId, _store);
-      _isManagedByStoreManager = false;
-      
-      if (kDebugMode) {
-        developer.log('StoreHook disposed for component $_componentId', name: 'StoreHook');
-      }
+    // Unsubscribe from store on disposal
+    if (_isSubscribed) {
+      _store.unsubscribe(_listener);
+      _isSubscribed = false;
     }
+    _updatePending = false;
   }
 }
