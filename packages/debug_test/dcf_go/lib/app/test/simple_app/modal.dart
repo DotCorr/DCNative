@@ -1,4 +1,4 @@
-import 'package:dcf_go/app/simple_app/app.dart';
+import 'package:dcf_go/app/test/simple_app/app.dart';
 import 'package:dcf_primitives/dcf_primitives.dart';
 import 'package:dcflight/dcflight.dart';
 import 'package:flutter/material.dart';
