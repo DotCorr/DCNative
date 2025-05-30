@@ -110,6 +110,7 @@ class UpdaterComponent extends StatefulComponent {
 
 /// Test app that demonstrates validation warnings
 class ValidationTestApp extends StatefulComponent {
+  
   @override
   DCFComponentNode render() {
     return DCFView(
