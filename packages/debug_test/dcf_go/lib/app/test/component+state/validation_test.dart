@@ -1,6 +1,7 @@
 // Test for store usage validation system
 
 import 'package:dcf_primitives/dcf_primitives.dart';
+import 'package:dcflight/framework/constants/layout_properties.dart';
 import 'package:dcflight/framework/renderer/vdom/component/component.dart';
 import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 import 'package:dcflight/framework/renderer/vdom/component/store.dart';
@@ -114,6 +115,7 @@ class ValidationTestApp extends StatefulComponent {
   @override
   DCFComponentNode render() {
     return DCFView(
+      layout: LayoutProps(flex: 1,padding: 50),
       children: [
         DCFText(content: 'Store Usage Validation Test'),
         DCFText(content: 'Check debug console for warnings'),
