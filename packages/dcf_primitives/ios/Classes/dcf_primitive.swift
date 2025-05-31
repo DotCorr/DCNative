@@ -26,11 +26,8 @@ import dcflight
         DCFComponentRegistry.shared.registerComponent("AnimatedText", componentClass: DCFAnimatedTextComponent.self)
         
         // Register new cross-platform primitives
-        DCFComponentRegistry.shared.registerComponent("Alert", componentClass: DCFAlertComponent.self)
-        DCFComponentRegistry.shared.registerComponent("Modal", componentClass: DCFModalComponent.self)
         DCFComponentRegistry.shared.registerComponent("TextInput", componentClass: DCFTextInputComponent.self)
         DCFComponentRegistry.shared.registerComponent("Drawer", componentClass: DCFDrawerComponent.self)
-        DCFComponentRegistry.shared.registerComponent("ContextMenu", componentClass: DCFContextMenuComponent.self)
         DCFComponentRegistry.shared.registerComponent("Dropdown", componentClass: DCFDropdownComponent.self)
         DCFComponentRegistry.shared.registerComponent("FlatList", componentClass: DCFFlatListComponent.self)
         

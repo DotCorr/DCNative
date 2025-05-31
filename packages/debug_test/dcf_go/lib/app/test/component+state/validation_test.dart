@@ -143,36 +143,7 @@ class ValidationTestApp extends StatefulComponent {
             modal.setState(true);
           },
         ),
-        DCFModal(
-          style: StyleSheet(backgroundColor: Colors.red), 
-          visible: modal.state,
-          presentationStyle: ModalPresentationStyle.formSheet,
-          header: ModalHeaderOptions(title: 'Reset Stores'),
-          borderRadius: 100,
-          onDismiss: () {
-            modal.setState(false);
-          },
-          children: [
-            DCFScrollView(
-      
-              layout: LayoutProps(
-                flex: 1,
-                padding: 30,
-            
-              ),
-              children: [
-                DCFText(content: 'Stores have been reset to initial values.'),
-                DCFButton(
-                  buttonProps: ButtonProps(title: 'Reset'),
-                  onPress: () {
-                    testStore1.setState(0);
-                    testStore2.setState('reset');
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
+        
       ],
     );
   }

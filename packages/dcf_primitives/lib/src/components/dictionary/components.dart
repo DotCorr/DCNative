@@ -12,11 +12,8 @@ export '../svg_component.dart';
 export '../icon_component.dart';
 
 // Export new cross-platform primitives
-export '../alert_component.dart';
-export '../modal_component.dart';
 export '../text_input_component.dart';
 export '../drawer_component.dart';
-export '../context_menu_component.dart';
 export '../dropdown_component.dart';
 export '../flat_list_component.dart';
 
