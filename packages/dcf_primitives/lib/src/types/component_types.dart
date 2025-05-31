@@ -313,7 +313,7 @@ class ContextMenuAction {
 }
 
 /// Dropdown menu item configuration
-class DropdownMenuItem {
+class DCFDropdownMenuItem {
   final String value;
   final String title;
   final String? subtitle;
@@ -321,7 +321,7 @@ class DropdownMenuItem {
   final bool disabled;
   final void Function(String value)? onSelected;
 
-  const DropdownMenuItem({
+  const DCFDropdownMenuItem({
     required this.value,
     required this.title,
     this.subtitle,

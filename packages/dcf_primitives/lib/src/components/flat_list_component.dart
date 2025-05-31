@@ -5,6 +5,7 @@ import '../types/component_types.dart' as types;
 /// Provides ultra-fast scrolling with component recycling and smart rendering
 class DCFFlatList<T> extends StatelessComponent {
   final List<T> data;
+  final LayoutProps? layout;
   final DCFComponentNode Function(T item, int index) renderItem;
   final String Function(T item, int index)? getItemType;
   final double? estimatedItemSize;
@@ -48,6 +49,7 @@ class DCFFlatList<T> extends StatelessComponent {
   DCFFlatList({
     super.key,
     required this.data,
+    this.layout = const LayoutProps(flex: 1),
     required this.renderItem,
     this.getItemType,
     this.estimatedItemSize,
@@ -96,6 +98,7 @@ class DCFFlatList<T> extends StatelessComponent {
       key: key,
       props: {
         'data': data.length,
+        ...layout?.toMap() ?? {},
         'orientation': orientation.name,
         'inverted': inverted,
         'initialNumToRender': initialNumToRender,

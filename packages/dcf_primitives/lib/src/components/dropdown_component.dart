@@ -1,15 +1,15 @@
 import 'package:dcflight/dcflight.dart';
-import '../types/component_types.dart' as types;
+import '../types/component_types.dart';
 
 /// DCFDropdown - Cross-platform dropdown menu component
 /// Provides native dropdown functionality with type-safe positioning and items
 class DCFDropdown extends StatelessComponent {
   final bool visible;
-  final List<types.DropdownMenuItem> items;
+  final List<DCFDropdownMenuItem> items;
   final String? selectedValue;
   final String? placeholder;
   final String? placeholderTextColor;
-  final types.DropdownPosition dropdownPosition;
+  final DropdownPosition dropdownPosition;
   final double? maxHeight;
   final double? itemHeight;
   final String? backgroundColor;
@@ -21,8 +21,8 @@ class DCFDropdown extends StatelessComponent {
   final bool multiSelect;
   final List<String>? selectedValues;
   final bool disabled;
-  final void Function(String, types.DropdownMenuItem)? onValueChange;
-  final void Function(List<String>, List<types.DropdownMenuItem>)? onMultiValueChange;
+  final void Function(String, DCFDropdownMenuItem)? onValueChange;
+  final void Function(List<String>, List<DCFDropdownMenuItem>)? onMultiValueChange;
   final void Function()? onOpen;
   final void Function()? onClose;
 
@@ -33,7 +33,7 @@ class DCFDropdown extends StatelessComponent {
     this.selectedValue,
     this.placeholder,
     this.placeholderTextColor,
-    this.dropdownPosition = types.DropdownPosition.auto,
+    this.dropdownPosition = DropdownPosition.auto,
     this.maxHeight,
     this.itemHeight,
     this.backgroundColor,

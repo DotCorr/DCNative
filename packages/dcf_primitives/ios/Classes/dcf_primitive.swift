@@ -27,7 +27,6 @@ import dcflight
         
         // Register new cross-platform primitives
         DCFComponentRegistry.shared.registerComponent("TextInput", componentClass: DCFTextInputComponent.self)
-        DCFComponentRegistry.shared.registerComponent("Drawer", componentClass: DCFDrawerComponent.self)
         DCFComponentRegistry.shared.registerComponent("Dropdown", componentClass: DCFDropdownComponent.self)
         DCFComponentRegistry.shared.registerComponent("FlatList", componentClass: DCFFlatListComponent.self)
         
