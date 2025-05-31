@@ -46,7 +46,7 @@ class ListStatePerf extends StatefulComponent {
               ),
           estimatedItemSize: 50,
           getItemType: (item, index) => "item",
-          orientation: ListOrientation.horizontal,
+          orientation: DCFListOrientation.horizontal,
           removeClippedSubviews: true,
           showsVerticalScrollIndicator: true,
           showsHorizontalScrollIndicator: true,

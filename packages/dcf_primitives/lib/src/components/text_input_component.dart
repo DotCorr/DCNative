@@ -10,11 +10,11 @@ class DCFTextInput extends StatelessComponent {
   final String? defaultValue;
   final String? placeholder;
   final Color? placeholderTextColor;
-  final types.TextInputType inputType;
-  final types.KeyboardType keyboardType;
-  final types.AutoCapitalizationType autoCapitalization;
-  final types.ReturnKeyType returnKeyType;
-  final types.TextContentType textContentType;
+  final types.DCFTextInputType inputType;
+  final types.DCFKeyboardType keyboardType;
+  final types.DCFAutoCapitalizationType autoCapitalization;
+  final types.DCFReturnKeyType returnKeyType;
+  final types.DCFTextContentType textContentType;
   final bool autoCorrect;
   final bool autoFocus;
   final bool blurOnSubmit;
@@ -52,11 +52,11 @@ class DCFTextInput extends StatelessComponent {
     this.defaultValue,
     this.placeholder,
     this.placeholderTextColor,
-    this.inputType = types.TextInputType.text,
-    this.keyboardType = types.KeyboardType.defaultType,
-    this.autoCapitalization = types.AutoCapitalizationType.sentences,
-    this.returnKeyType = types.ReturnKeyType.defaultReturn,
-    this.textContentType = types.TextContentType.none,
+    this.inputType = types.DCFTextInputType.text,
+    this.keyboardType = types.DCFKeyboardType.defaultType,
+    this.autoCapitalization = types.DCFAutoCapitalizationType.sentences,
+    this.returnKeyType = types.DCFReturnKeyType.defaultReturn,
+    this.textContentType = types.DCFTextContentType.none,
     this.autoCorrect = true,
     this.autoFocus = false,
     this.blurOnSubmit = true,

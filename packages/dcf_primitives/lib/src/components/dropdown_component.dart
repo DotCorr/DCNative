@@ -9,7 +9,7 @@ class DCFDropdown extends StatelessComponent {
   final String? selectedValue;
   final String? placeholder;
   final String? placeholderTextColor;
-  final DropdownPosition dropdownPosition;
+  final DCFDropdownPosition dropdownPosition;
   final double? maxHeight;
   final double? itemHeight;
   final String? backgroundColor;
@@ -33,7 +33,7 @@ class DCFDropdown extends StatelessComponent {
     this.selectedValue,
     this.placeholder,
     this.placeholderTextColor,
-    this.dropdownPosition = DropdownPosition.auto,
+    this.dropdownPosition = DCFDropdownPosition.auto,
     this.maxHeight,
     this.itemHeight,
     this.backgroundColor,

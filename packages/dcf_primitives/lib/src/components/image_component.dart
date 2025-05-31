@@ -7,7 +7,7 @@ class ImageProps {
   final String source;
   
   /// Resize mode for the image - type-safe enum
-  final types.ImageResizeMode? resizeMode;
+  final types.DCFImageResizeMode? resizeMode;
   
   /// Whether to fade in the image when loaded
   final bool? fadeDuration;

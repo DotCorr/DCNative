@@ -10,7 +10,7 @@ class DCFFlatList<T> extends StatelessComponent {
   final String Function(T item, int index)? getItemType;
   final double? estimatedItemSize;
   final types.ListItemConfig Function(T item, int index)? getItemLayout;
-  final types.ListOrientation orientation;
+  final types.DCFListOrientation orientation;
   final bool inverted;
   final int? initialNumToRender;
   final double? maxToRenderPerBatch;
@@ -18,7 +18,7 @@ class DCFFlatList<T> extends StatelessComponent {
   final bool removeClippedSubviews;
   final bool showsVerticalScrollIndicator;
   final bool showsHorizontalScrollIndicator;
-  final types.EdgeInsets? contentInset;
+  final types.DCFEdgeInsets? contentInset;
   final bool bounces;
   final bool alwaysBounceVertical;
   final bool alwaysBounceHorizontal;
@@ -54,7 +54,7 @@ class DCFFlatList<T> extends StatelessComponent {
     this.getItemType,
     this.estimatedItemSize,
     this.getItemLayout,
-    this.orientation = types.ListOrientation.vertical,
+    this.orientation = types.DCFListOrientation.vertical,
     this.inverted = false,
     this.initialNumToRender = 10,
     this.maxToRenderPerBatch = 10,

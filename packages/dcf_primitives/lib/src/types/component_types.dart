@@ -1,110 +1,22 @@
 // DCFlight Component Types
 // Type-safe enums and classes for component properties
 
-import 'package:dcflight/dcflight.dart';
-
-/// Modal presentation styles
-enum ModalPresentationStyle {
-  automatic,
-  fullScreen,
-  pageSheet,
-  formSheet,
-  overFullScreen,
-  overCurrentContext,
-  popover,
-  none,
-}
-
-/// Modal transition styles
-enum ModalTransitionStyle {
-  coverVertical,
-  flipHorizontal,
-  crossDissolve,
-  partialCurl,
-}
-
-/// Modal header button styles
-enum ModalHeaderButtonStyle {
-  plain,
-  done,
-  bordered,
-  borderless,
-}
-
-/// Modal header button item
-class ModalHeaderButton {
-  final String title;
-  final ModalHeaderButtonStyle style;
-  final bool enabled;
-  final void Function()? onPress;
-
-  const ModalHeaderButton({
-    required this.title,
-    this.style = ModalHeaderButtonStyle.plain,
-    this.enabled = true,
-    this.onPress,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'style': style.name,
-      'enabled': enabled,
-    };
-  }
-}
-
-/// Modal header options
-class ModalHeaderOptions {
-  final String? title;
-  final ModalHeaderButton? leftButton;
-  final ModalHeaderButton? rightButton;
-  final bool showCloseButton;
-  final Color? backgroundColor;
-  final Color? titleColor;
-  final double? fontSize;
-  final String? fontWeight;
-
-  const ModalHeaderOptions({
-    this.title,
-    this.leftButton,
-    this.rightButton,
-    this.showCloseButton = true,
-    this.backgroundColor,
-    this.titleColor,
-    this.fontSize,
-    this.fontWeight,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      if (title != null) 'title': title,
-      if (leftButton != null) 'leftButton': leftButton!.toMap(),
-      if (rightButton != null) 'rightButton': rightButton!.toMap(),
-      'showCloseButton': showCloseButton,
-      if (backgroundColor != null) 'backgroundColor': backgroundColor.toString(),
-      if (titleColor != null) 'titleColor': titleColor.toString(),
-      if (fontSize != null) 'fontSize': fontSize,
-      if (fontWeight != null) 'fontWeight': fontWeight,
-    };
-  }
-}
 
 /// Alert action styles
-enum AlertActionStyle {
+enum DCFAlertActionStyle {
   defaultStyle,
   cancel,
   destructive,
 }
 
 /// Alert styles
-enum AlertStyle {
+enum DCFAlertStyle {
   alert,
   actionSheet,
 }
 
 /// Text input types
-enum TextInputType {
+enum DCFTextInputType {
   text,
   email,
   password,
@@ -116,7 +28,7 @@ enum TextInputType {
 }
 
 /// Keyboard types
-enum KeyboardType {
+enum DCFKeyboardType {
   defaultType,
   asciiCapable,
   numbersAndPunctuation,
@@ -131,7 +43,7 @@ enum KeyboardType {
 }
 
 /// Auto-capitalization types
-enum AutoCapitalizationType {
+enum DCFAutoCapitalizationType {
   none,
   words,
   sentences,
@@ -139,7 +51,7 @@ enum AutoCapitalizationType {
 }
 
 /// Return key types
-enum ReturnKeyType {
+enum DCFReturnKeyType {
   defaultReturn,
   go,
   google,
@@ -155,7 +67,7 @@ enum ReturnKeyType {
 }
 
 /// Text content types for autofill
-enum TextContentType {
+enum DCFTextContentType {
   none,
   addressCity,
   addressCityAndState,
@@ -186,28 +98,9 @@ enum TextContentType {
   oneTimeCode,
 }
 
-/// Drawer positions
-enum DrawerPosition {
-  left,
-  right,
-}
-
-/// Drawer types
-enum DrawerType {
-  front,
-  back,
-  slide,
-}
-
-/// Context menu preview types
-enum ContextMenuPreviewType {
-  none,
-  default_,
-  hapticFeedback,
-}
 
 /// Dropdown menu positions
-enum DropdownPosition {
+enum DCFDropdownPosition {
   auto,
   top,
   bottom,
@@ -216,13 +109,13 @@ enum DropdownPosition {
 }
 
 /// FlatList layout orientations
-enum ListOrientation {
+enum DCFListOrientation {
   vertical,
   horizontal,
 }
 
 /// FlatList scroll positions
-enum ScrollPosition {
+enum DCFScrollPosition {
   start,
   center,
   end,
@@ -230,7 +123,7 @@ enum ScrollPosition {
 }
 
 /// FlatList item separator positions
-enum SeparatorPosition {
+enum DCFSeparatorPosition {
   leading,
   trailing,
   both,
@@ -238,7 +131,7 @@ enum SeparatorPosition {
 }
 
 /// Image resize modes - type-safe options for image resizing
-enum ImageResizeMode {
+enum DCFImageResizeMode {
   cover,
   contain,
   stretch,
@@ -246,33 +139,33 @@ enum ImageResizeMode {
   center,
 }
 
-extension ImageResizeModeExtension on ImageResizeMode {
+extension DCFImageResizeModeExtension on DCFImageResizeMode {
   String get name {
     switch (this) {
-      case ImageResizeMode.cover:
+      case DCFImageResizeMode.cover:
         return 'cover';
-      case ImageResizeMode.contain:
+      case DCFImageResizeMode.contain:
         return 'contain';
-      case ImageResizeMode.stretch:
+      case DCFImageResizeMode.stretch:
         return 'stretch';
-      case ImageResizeMode.repeat:
+      case DCFImageResizeMode.repeat:
         return 'repeat';
-      case ImageResizeMode.center:
+      case DCFImageResizeMode.center:
         return 'center';
     }
   }
 }
 
 /// Alert action configuration
-class AlertAction {
+class DCFAlertAction {
   final String title;
-  final AlertActionStyle style;
+  final DCFAlertActionStyle style;
   final void Function()? onPressed;
   final bool enabled;
 
-  const AlertAction({
+  const DCFAlertAction({
     required this.title,
-    this.style = AlertActionStyle.defaultStyle,
+    this.style = DCFAlertActionStyle.defaultStyle,
     this.onPressed,
     this.enabled = true,
   });
@@ -286,31 +179,6 @@ class AlertAction {
   }
 }
 
-/// Context menu action configuration
-class ContextMenuAction {
-  final String title;
-  final String? icon;
-  final bool destructive;
-  final bool disabled;
-  final void Function()? onPressed;
-
-  const ContextMenuAction({
-    required this.title,
-    this.icon,
-    this.destructive = false,
-    this.disabled = false,
-    this.onPressed,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      'title': title,
-      'icon': icon,
-      'destructive': destructive,
-      'disabled': disabled,
-    };
-  }
-}
 
 /// Dropdown menu item configuration
 class DCFDropdownMenuItem {
@@ -363,19 +231,19 @@ class ListItemConfig {
 }
 
 /// Edge insets configuration
-class EdgeInsets {
+class DCFEdgeInsets {
   final double top;
   final double left;
   final double bottom;
   final double right;
 
-  const EdgeInsets.all(double value)
+  const DCFEdgeInsets.all(double value)
       : top = value,
         left = value,
         bottom = value,
         right = value;
 
-  const EdgeInsets.symmetric({
+  const DCFEdgeInsets.symmetric({
     double vertical = 0,
     double horizontal = 0,
   })  : top = vertical,
@@ -383,7 +251,7 @@ class EdgeInsets {
         left = horizontal,
         right = horizontal;
 
-  const EdgeInsets.only({
+  const DCFEdgeInsets.only({
     this.top = 0,
     this.left = 0,
     this.bottom = 0,
@@ -399,38 +267,3 @@ class EdgeInsets {
     };
   }
 }
-
-/// Modal sheet configuration for iOS 15+ features
-class ModalSheetConfiguration {
-  final List<String>? detents;
-  final String? selectedDetent;
-  final bool isDismissible;
-  final bool showDragIndicator;
-  final bool prefersScrollingExpandsWhenScrolledToEdge;
-  final bool prefersEdgeAttachedInCompactHeight;
-  final double? customDetentHeight;
-
-  const ModalSheetConfiguration({
-    this.detents,
-    this.selectedDetent,
-    this.isDismissible = true,
-    this.showDragIndicator = true,
-    this.prefersScrollingExpandsWhenScrolledToEdge = true,
-    this.prefersEdgeAttachedInCompactHeight = true,
-    this.customDetentHeight,
-  });
-
-  Map<String, dynamic> toMap() {
-    return {
-      if (detents != null) 'detents': detents,
-      if (selectedDetent != null) 'selectedDetent': selectedDetent,
-      'isDismissible': isDismissible,
-      'showDragIndicator': showDragIndicator,
-      'prefersScrollingExpandsWhenScrolledToEdge': prefersScrollingExpandsWhenScrolledToEdge,
-      'prefersEdgeAttachedInCompactHeight': prefersEdgeAttachedInCompactHeight,
-      if (customDetentHeight != null) 'customDetentHeight': customDetentHeight,
-    };
-  }
-}
-
-/// Modal header options
