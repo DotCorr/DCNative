@@ -592,17 +592,34 @@ class VDom {
     // Find index of node in parent
     final index = _findNodeIndexInParent(oldNode);
 
-    // Delete the old view
-    await _nativeBridge.deleteView(oldNode.effectiveNativeViewId!);
-    _nodesByViewId.remove(oldNode.effectiveNativeViewId);
-    
-    // Create the new view
-    final newViewId = await renderToNative(newNode, parentViewId: parentViewId, index: index);
-    
-    // Update references
-    if (newViewId != null && newViewId.isNotEmpty) {
-      newNode.nativeViewId = newViewId;
-      _nodesByViewId[newViewId] = newNode;
+    // CRITICAL FIX: Temporarily exit batch mode to ensure atomic delete+create
+    // This prevents createView from being queued while deleteView executes immediately
+    final wasBatchMode = _batchUpdateInProgress;
+    if (wasBatchMode) {
+      // Temporarily commit current batch to ensure proper ordering
+      await _nativeBridge.commitBatchUpdate();
+      _batchUpdateInProgress = false;
+    }
+
+    try {
+      // Delete the old view
+      await _nativeBridge.deleteView(oldNode.effectiveNativeViewId!);
+      _nodesByViewId.remove(oldNode.effectiveNativeViewId);
+      
+      // Create the new view (now outside batch mode, so it executes immediately)
+      final newViewId = await renderToNative(newNode, parentViewId: parentViewId, index: index);
+      
+      // Update references
+      if (newViewId != null && newViewId.isNotEmpty) {
+        newNode.nativeViewId = newViewId;
+        _nodesByViewId[newViewId] = newNode;
+      }
+    } finally {
+      // Resume batch mode if we were previously in batch mode
+      if (wasBatchMode) {
+        await _nativeBridge.startBatchUpdate();
+        _batchUpdateInProgress = true;
+      }
     }
   }
 
