@@ -3,7 +3,7 @@
 # 🚧 This CLI is Under Development
 
 ## 📌 Key Points
-DCFlight in short is a framework that renders actual native UI. Built on top of the flutter engine(Flutter engine here provides us the dart runtime and some utilities. More like Hermes in react native). As seen below DCFlight:
+DCFlight in short is a framework that renders actual native UI. Built on top of the flutter engine(Flutter engine here provides us the dart runtime and some utilities. More like Hermes in react native). As seen below for DCFlight IOS:
 ``` swift
 import dcflight
 
