@@ -1,38 +1,20 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
 import 'state_hook.dart';
+import 'store.dart';
 
-/// Base component class
-abstract class Component {
+/// Stateful component with hooks and lifecycle methods
+abstract class StatefulComponent extends VDomNode {
   /// Unique ID for this component instance
   final String instanceId;
 
-  /// Key for reconciliation
-  final String? key;
-
-  /// Fully qualified type name for component
+  /// Type name for debugging
   final String typeName;
 
-  /// Create a component
-  Component({this.key})
-      : instanceId = DateTime.now().millisecondsSinceEpoch.toString() +
-            Random().nextDouble().toString(),
-        typeName = StackTrace.current.toString().split('\n')[1].split(' ')[0];
+  /// The rendered node from the component
+  VDomNode? _renderedNode;
 
-  /// Render the component
-  VDomNode render();
-
-  /// Called when the component is mounted
-  void componentDidMount() {}
-
-  /// Called when the component will unmount
-  void componentWillUnmount() {
-    // Base implementation does nothing
-  }
-}
-
-/// Stateful component with hooks
-abstract class StatefulComponent extends Component {
   /// Whether the component is mounted
   bool _isMounted = false;
 
@@ -46,7 +28,45 @@ abstract class StatefulComponent extends Component {
   Function() scheduleUpdate = () {};
 
   /// Create a stateful component
-  StatefulComponent({super.key});
+  StatefulComponent({super.key})
+      : instanceId = DateTime.now().millisecondsSinceEpoch.toString() +
+            '.' + Random().nextDouble().toString(),
+        typeName = StackTrace.current.toString().split('\n')[1].split(' ')[0] {
+    scheduleUpdate = _defaultScheduleUpdate;
+  }
+
+  /// Default no-op schedule update function (replaced by VDOM)
+  void _defaultScheduleUpdate() {
+    if (kDebugMode) {
+      print('Warning: scheduleUpdate called before component was registered with VDOM');
+    }
+  }
+
+  /// Render the component - must be implemented by subclasses
+  VDomNode render();
+  
+  /// Get the rendered node (lazily render if necessary)
+  @override
+  VDomNode get renderedNode {
+    if (_renderedNode == null) {
+      prepareForRender();
+      _renderedNode = render();
+      
+      if (_renderedNode != null) {
+        _renderedNode!.parent = this;
+      }
+    }
+    return _renderedNode!;
+  }
+  
+  /// Set the rendered node
+  @override
+  set renderedNode(VDomNode? node) {
+    _renderedNode = node;
+    if (_renderedNode != null) {
+      _renderedNode!.parent = this;
+    }
+  }
 
   /// Get whether the component is mounted
   bool get isMounted => _isMounted;
@@ -72,7 +92,7 @@ abstract class StatefulComponent extends Component {
   void componentDidUpdate(Map<String, dynamic> prevProps) {}
 
   /// Reset hook state for next render
-  void _resetHookState() {
+  void prepareForRender() {
     _hookIndex = 0;
   }
 
@@ -100,9 +120,12 @@ abstract class StatefulComponent extends Component {
       // Create new hook
       final hook = EffectHook(effect, dependencies);
       _hooks.add(hook);
+    } else {
+      // Update dependencies for existing hook
+      final hook = _hooks[_hookIndex] as EffectHook;
+      hook.updateDependencies(dependencies);
     }
     
-    // Just increment the hook index
     _hookIndex++;
   }
 
@@ -121,9 +144,21 @@ abstract class StatefulComponent extends Component {
     return hook.ref;
   }
 
-  /// Prepare component for rendering - used by VDOM
-  void prepareForRender() {
-    _resetHookState();
+  /// Create a store hook for global state
+  StoreHook<T> useStore<T>(Store<T> store) {
+    if (_hookIndex >= _hooks.length) {
+      // Create new hook
+      final hook = StoreHook<T>(store, () {
+        scheduleUpdate();
+      });
+      _hooks.add(hook);
+    }
+    
+    // Get the hook (either existing or newly created)
+    final hook = _hooks[_hookIndex] as StoreHook<T>;
+    _hookIndex++;
+    
+    return hook;
   }
 
   /// Run effects after render - called by VDOM
@@ -134,6 +169,147 @@ abstract class StatefulComponent extends Component {
         hook.runEffect();
       }
     }
+  }
+  
+  /// Implement VDomNode methods
+  
+  @override
+  VDomNode clone() {
+    // Components can't be cloned easily due to state, hooks, etc.
+    throw UnsupportedError("Stateful components cannot be cloned directly.");
+  }
+  
+  @override
+  bool equals(VDomNode other) {
+    if (other is! StatefulComponent) return false;
+    // Components are considered equal if they're the same type with the same key
+    return runtimeType == other.runtimeType && key == other.key;
+  }
+  
+  @override
+  void mount(VDomNode? parent) {
+    this.parent = parent;
+    
+    // Ensure the component has rendered
+    final node = renderedNode;
+    
+    // Mount the rendered content
+    node.mount(this);
+  }
+  
+  @override
+  void unmount() {
+    // Unmount the rendered content if any
+    if (_renderedNode != null) {
+      _renderedNode!.unmount();
+      _renderedNode = null;
+    }
+    
+    // Component lifecycle method
+    componentWillUnmount();
+  }
+
+  @override
+  String toString() {
+    return '$typeName($instanceId)';
+  }
+}
+
+/// Stateless component without hooks or state
+abstract class StatelessComponent extends VDomNode {
+  /// Unique ID for this component instance
+  final String instanceId;
+
+  /// Type name for debugging
+  final String typeName;
+
+  /// The rendered node from the component
+  VDomNode? _renderedNode;
+
+  /// Whether the component is mounted
+  bool _isMounted = false;
+
+  /// Create a stateless component
+  StatelessComponent({super.key})
+      : instanceId = DateTime.now().millisecondsSinceEpoch.toString() +
+            '.' + Random().nextDouble().toString(),
+        typeName = StackTrace.current.toString().split('\n')[1].split(' ')[0];
+
+  /// Render the component - must be implemented by subclasses
+  VDomNode render();
+  
+  /// Get the rendered node (lazily render if necessary)
+  @override
+  VDomNode get renderedNode {
+    _renderedNode ??= render();
+    
+    if (_renderedNode != null) {
+      _renderedNode!.parent = this;
+    }
+    
+    return _renderedNode!;
+  }
+  
+  /// Set the rendered node
+  @override
+  set renderedNode(VDomNode? node) {
+    _renderedNode = node;
+    if (_renderedNode != null) {
+      _renderedNode!.parent = this;
+    }
+  }
+
+  /// Get whether the component is mounted
+  bool get isMounted => _isMounted;
+
+  /// Called when the component is mounted
+  @override
+  void componentDidMount() {
+    _isMounted = true;
+  }
+
+  /// Called when the component will unmount
+  @override
+  void componentWillUnmount() {
+    _isMounted = false;
+  }
+  
+  /// Implement VDomNode methods
+  
+  @override
+  VDomNode clone() {
+    // Components can't be cloned easily
+    throw UnsupportedError("Stateless components cannot be cloned directly.");
+  }
+  
+  @override
+  bool equals(VDomNode other) {
+    if (other is! StatelessComponent) return false;
+    // Components are equal if they're the same type with the same key
+    return runtimeType == other.runtimeType && key == other.key;
+  }
+  
+  @override
+  void mount(VDomNode? parent) {
+    this.parent = parent;
+    
+    // Ensure the component has rendered
+    final node = renderedNode;
+    
+    // Mount the rendered content
+    node.mount(this);
+  }
+  
+  @override
+  void unmount() {
+    // Unmount the rendered content if any
+    if (_renderedNode != null) {
+      _renderedNode!.unmount();
+      _renderedNode = null;
+    }
+    
+    // Component lifecycle method
+    componentWillUnmount();
   }
 
   @override

@@ -356,17 +356,4 @@ class GestureView: UIView {
         // Force user interaction to be enabled
         self.isUserInteractionEnabled = true
     }
-    
-    // Override hit testing to ensure touches are detected even with transparency
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if _debugMode {
-            print("🔍 Hit test on GestureView: \(point), bounds: \(self.bounds)")
-        }
-        
-        let result = bounds.contains(point)
-        if _debugMode && !result {
-            print("❌ Point outside gesture area")
-        }
-        return result
-    }
 }

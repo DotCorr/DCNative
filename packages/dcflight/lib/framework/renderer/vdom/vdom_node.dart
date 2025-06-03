@@ -8,6 +8,12 @@ abstract class VDomNode {
 
   /// Native view ID once rendered
   String? nativeViewId;
+  
+  /// The native view ID of the rendered content
+  String? contentViewId;
+  
+  /// The rendered node from the component (for component nodes)
+  VDomNode? _renderedNode;
 
   VDomNode({this.key});
 
@@ -19,6 +25,33 @@ abstract class VDomNode {
 
   void mount(VDomNode? parent);
   void unmount();
+  
+  /// Called when the node is mounted (lifecycle method)
+  void componentDidMount() {
+    // Base implementation does nothing
+  }
+
+  /// Called when the node will unmount (lifecycle method)
+  void componentWillUnmount() {
+    // Base implementation does nothing
+  }
+  
+  /// Get the rendered node (for component-like nodes)
+  VDomNode? get renderedNode => _renderedNode;
+  
+  /// Set the rendered node (for component-like nodes)
+  set renderedNode(VDomNode? node) {
+    _renderedNode = node;
+    if (_renderedNode != null) {
+      _renderedNode!.parent = this;
+    }
+  }
+  
+  /// Get effective native view ID (may be from rendered content)
+  String? get effectiveNativeViewId {
+    // For component nodes, the native view ID is the ID of their rendered content
+    return contentViewId ?? nativeViewId;
+  }
 
   @override
   String toString() {
@@ -51,5 +84,4 @@ class EmptyVDomNode extends VDomNode {
   }
 }
 
-// Dev friendly name
-typedef UIComponent = VDomNode;
+

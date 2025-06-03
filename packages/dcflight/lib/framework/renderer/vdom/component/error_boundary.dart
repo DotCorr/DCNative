@@ -2,7 +2,6 @@ import 'dart:developer' as developer;
 
 import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
 
-
 import 'component.dart';
 
 /// Component that catches errors in its subtree

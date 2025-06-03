@@ -1,5 +1,7 @@
 import 'dart:ui' show Color;
 
+import 'package:dcflight/dcflight.dart';
+
 /// StyleSheet for visual styling properties
 class StyleSheet {
   // Border styles
@@ -42,11 +44,11 @@ class StyleSheet {
     this.borderTopRightRadius,
     this.borderBottomLeftRadius,
     this.borderBottomRightRadius,
-    this.borderColor,
+    this.borderColor = Colors.black,
     this.borderWidth,
     this.backgroundColor,
     this.opacity,
-    this.shadowColor,
+    this.shadowColor = Colors.black,
     this.shadowOpacity,
     this.shadowRadius,
     this.shadowOffsetX,

@@ -81,7 +81,7 @@ class DCFTouchableOpacityComponent: NSObject, DCFComponent, ComponentMethodHandl
         if tryDirectEventHandling(view, eventType: "onPressIn") || 
            tryStaticDictionaryHandling(view, eventType: "onPressIn") ||
            tryGenericEventHandling(view, eventType: "onPressIn") {
-            print("✅ onPressIn event handled successfully")
+          
         } else {
             print("⚠️ onPressIn event not handled - no handler registered")
         }
@@ -118,7 +118,6 @@ class DCFTouchableOpacityComponent: NSObject, DCFComponent, ComponentMethodHandl
         if tryDirectEventHandling(view, eventType: eventType) || 
            tryStaticDictionaryHandling(view, eventType: eventType) ||
            tryGenericEventHandling(view, eventType: eventType) {
-            print("✅ \(eventType) event handled successfully")
         } else {
             print("⚠️ \(eventType) event not handled - no handler registered")
         }
@@ -340,17 +339,11 @@ class TouchableView: UIView {
     // MARK: - Touch Handling
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if _debugMode {
-            print("👇 TouchableView touchesBegan")
-        }
         super.touchesBegan(touches, with: event)
         component?.handleTouchDown(self)
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if _debugMode {
-            print("👆 TouchableView touchesEnded")
-        }
         super.touchesEnded(touches, with: event)
         
         // Check if touch is inside view
@@ -364,27 +357,7 @@ class TouchableView: UIView {
     }
     
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if _debugMode {
-            print("🚫 TouchableView touchesCancelled")
-        }
         super.touchesCancelled(touches, with: event)
         component?.handleTouchUp(self, inside: false)
-    }
-    
-    // Override hit testing to ensure touches are detected even with transparency
-    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        if _debugMode {
-            print("🔍 Hit test on TouchableView: \(point), bounds: \(self.bounds)")
-        }
-        
-        // Expand the hit area slightly for better touch handling
-        let hitTestInsets = UIEdgeInsets(top: -8, left: -8, bottom: -8, right: -8)
-        let hitTestRect = bounds.inset(by: hitTestInsets)
-        
-        let result = hitTestRect.contains(point)
-        if _debugMode && !result {
-            print("❌ Point outside hit area")
-        }
-        return result
     }
 }

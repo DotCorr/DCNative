@@ -1,5 +1,6 @@
 // filepath: /Users/tahiruagbanwa/Desktop/Dotcorr/DCFlight/packages/dcflight/lib/framework/renderer/vdom/vdom_element.dart
-import 'vdom_node.dart';
+import 'package:dcflight/dcflight.dart';
+
 
 /// Represents an element in the Virtual DOM tree
 class VDomElement extends VDomNode {
@@ -8,7 +9,6 @@ class VDomElement extends VDomNode {
 
   /// Properties of the element
   Map<String, dynamic> props;
-
   /// Child nodes
   final List<VDomNode> children;
 
@@ -19,7 +19,7 @@ class VDomElement extends VDomNode {
     this.children = const [],
   }) {
     // Set parent reference for children
-    for (var child in this.children) {
+    for (var child in children) {
       child.parent = this;
     }
   }
@@ -59,11 +59,11 @@ class VDomElement extends VDomNode {
     }
     return result;
   }
-  
+
   /// Get list of event types from props
   List<String> get eventTypes {
     final List<String> types = [];
-    
+
     // Extract event types from props with direct event names (e.g., 'onPress')
     for (final key in props.keys) {
       if (props[key] is Function) {
@@ -72,25 +72,26 @@ class VDomElement extends VDomNode {
           // Use the event name directly without normalization (onPress -> onPress)
           types.add(key);
         }
-        
+
         // Also check for canonical format that will be sent from native (onPress -> press)
         if (key.startsWith('on') && key.length > 2) {
           // Convert onEventName to eventName format
-          final eventName = key.substring(2, 3).toLowerCase() + key.substring(3);
+          final eventName =
+              key.substring(2, 3).toLowerCase() + key.substring(3);
           if (!types.contains(eventName)) {
             types.add(eventName);
           }
         }
       }
     }
-    
+
     return types;
   }
 
   @override
   void mount(VDomNode? parent) {
     this.parent = parent;
-    
+
     // Call mount on children
     for (final child in children) {
       child.mount(this);

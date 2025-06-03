@@ -42,6 +42,8 @@ class LayoutProps {
   final YogaAlign? alignSelf;
   final YogaAlign? alignContent;
   final YogaWrap? flexWrap;
+  // Another reminder that module dev should be always be sure to set leaf nodes to have a default felx value of one
+  // Not doing this might possiby confuse developers as they expect leaf nodes to fill by default the available space from their parent 
   final double? flex;
   final double? flexGrow;
   final double? flexShrink;
@@ -54,13 +56,15 @@ class LayoutProps {
   // Direction
   final YogaDirection? direction;
 
+@Deprecated("Use borderWidth from style instead")
   // Border (although visual, it affects layout)
   final dynamic borderWidth;
 
   /// Create layout props with the specified values
   const LayoutProps({
+    // these defauts are just for visibiity reasons. 
     this.width = '100%', // Default to 100% width for proper nesting
-    this.height = 40, // Default to 40 height for visibility
+    this.height = "50%", // Default to 50% height for visibility
     this.minWidth,
     this.maxWidth,
     this.minHeight,
@@ -72,7 +76,7 @@ class LayoutProps {
     this.marginLeft,
     this.marginHorizontal,
     this.marginVertical,
-    this.padding,
+    this.padding = 8,
     this.paddingTop,
     this.paddingRight,
     this.paddingBottom,
@@ -84,18 +88,18 @@ class LayoutProps {
     this.right,
     this.bottom,
     this.position,
-    this.flexDirection,
+    this.flexDirection = YogaFlexDirection.column,
     this.justifyContent,
-    this.alignItems,
+    this.alignItems = YogaAlign.stretch,
     this.alignSelf,
-    this.alignContent,
-    this.flexWrap,
+    this.alignContent = YogaAlign.stretch,
+    this.flexWrap = YogaWrap.wrap,
     this.flex,
     this.flexGrow,
     this.flexShrink,
     this.flexBasis,
-    this.display,
-    this.overflow,
+    this.display = YogaDisplay.flex,
+    this.overflow = YogaOverflow.visible,
     this.direction,
     this.borderWidth,
   });

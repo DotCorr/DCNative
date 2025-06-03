@@ -1,7 +1,7 @@
+import 'package:dcflight/framework/protocol/component_protocol.dart';
 import 'package:dcflight/framework/renderer/vdom/vdom_element.dart';
 import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
 import 'package:flutter/foundation.dart';
-import 'component_protocol.dart';
 
 /// Registry for component factories
 /// This allows components to be registered with the framework
@@ -16,38 +16,22 @@ class ComponentRegistry {
   /// Map of component factories by type
   final Map<String, ComponentFactory> _factories = {};
   
-  /// Map of component definitions by type
-  final Map<String, ComponentDefinition> _definitions = {};
-  
+
   /// Register a component factory and definition
-  void registerComponent(String type, ComponentFactory factory, [ComponentDefinition? definition]) {
+  void registerComponent(String type, ComponentFactory factory) {
     _factories[type] = factory;
     
-    if (definition != null) {
-      _definitions[type] = definition;
-    }
+    
     
     debugPrint('Registered component: $type');
   }
-  
-  /// Register a component definition
-  void registerComponentDefinition(ComponentDefinition definition) {
-    _definitions[definition.type] = definition;
-    
-    // Also register the factory function
-    _factories[definition.type] = definition.create;
-    debugPrint('Registered component definition: ${definition.type}');
-  }
-  
+
   /// Get a component factory by type
   ComponentFactory? getFactory(String type) {
     return _factories[type];
   }
   
-  /// Get a component definition by type
-  ComponentDefinition? getDefinition(String type) {
-    return _definitions[type];
-  }
+
   
   /// Check if a component type is registered
   bool hasComponent(String type) {
@@ -67,16 +51,5 @@ class ComponentRegistry {
     }
     
     return factory(props, children);
-  }
-  
-  /// Call a method on a component instance
-  Future<dynamic> callMethod(String type, String viewId, String methodName, Map<String, dynamic> args) async {
-    final definition = _definitions[type];
-    if (definition == null) {
-      debugPrint('Component definition not found for method call: $type');
-      return null;
-    }
-    
-    return definition.callMethod(viewId, methodName, args);
   }
 }

@@ -32,65 +32,84 @@ class DCFTextComponent: NSObject, DCFComponent, ComponentMethodHandler {
             label.text = content
         }
         
-        // Get font size (default to system font size if not specified)
-        let fontSize = props["fontSize"] as? CGFloat ?? UIFont.systemFontSize
+        // Only update font properties if they're actually specified in props
+        var shouldUpdateFont = false
+        var fontSize: CGFloat?
+        var fontWeight: UIFont.Weight?
+        var fontFamily: String?
+        var isFontAsset = false
         
-        // Determine font weight
-        var fontWeight = UIFont.Weight.regular
-        if let fontWeightString = props["fontWeight"] as? String {
-            fontWeight = fontWeightFromString(fontWeightString)
+        // Get font size if specified
+        if let fontSizeValue = props["fontSize"] as? CGFloat {
+            fontSize = fontSizeValue
+            shouldUpdateFont = true
         }
         
-        // Check if font is from an asset (with isFontAsset flag)
-        let isFontAsset = props["isFontAsset"] as? Bool ?? false
+        // Get font weight if specified
+        if let fontWeightString = props["fontWeight"] as? String {
+            fontWeight = fontWeightFromString(fontWeightString)
+            shouldUpdateFont = true
+        }
         
-        // Set font family if specified
-        if let fontFamily = props["fontFamily"] as? String {
-            if isFontAsset {
-                // Use the same asset resolution approach as SVG
-                let key = sharedFlutterViewController?.lookupKey(forAsset: fontFamily)
-                let mainBundle = Bundle.main
-                let path = mainBundle.path(forResource: key, ofType: nil)
-                
-                print("🔤 Font asset lookup - key: \(String(describing: key)), path: \(String(describing: path))")
-                
-                loadFontFromAsset(fontFamily, path: path, fontSize: fontSize, weight: fontWeight) { font in
-                    if let font = font {
-                        label.font = font
+        // Get font family if specified
+        if let fontFamilyValue = props["fontFamily"] as? String {
+            fontFamily = fontFamilyValue
+            isFontAsset = props["isFontAsset"] as? Bool ?? false
+            shouldUpdateFont = true
+        }
+        
+        // Only update font if at least one font property was specified
+        if shouldUpdateFont {
+            let currentFont = label.font ?? UIFont.systemFont(ofSize: UIFont.systemFontSize)
+            let finalFontSize = fontSize ?? currentFont.pointSize
+            let finalFontWeight = fontWeight ?? .regular
+            
+            if let fontFamily = fontFamily {
+                if isFontAsset {
+                    // Use the same asset resolution approach as SVG
+                    let key = sharedFlutterViewController?.lookupKey(forAsset: fontFamily)
+                    let mainBundle = Bundle.main
+                    let path = mainBundle.path(forResource: key, ofType: nil)
+                    
+                    loadFontFromAsset(fontFamily, path: path, fontSize: finalFontSize, weight: finalFontWeight) { font in
+                        if let font = font {
+                            label.font = font
+                        } else {
+                            // Fallback to system font if custom font loading fails
+                            label.font = UIFont.systemFont(ofSize: finalFontSize, weight: finalFontWeight)
+                        }
+                    }
+                } else {
+                    // Try to use a pre-installed font by name
+                    if let font = UIFont(name: fontFamily, size: finalFontSize) {
+                        // Apply weight if needed
+                        if finalFontWeight != .regular {
+                            let descriptor = font.fontDescriptor.addingAttributes([
+                                .traits: [UIFontDescriptor.TraitKey.weight: finalFontWeight]
+                            ])
+                            label.font = UIFont(descriptor: descriptor, size: finalFontSize)
+                        } else {
+                            label.font = font
+                        }
                     } else {
-                        // Fallback to system font if custom font loading fails
-                        label.font = UIFont.systemFont(ofSize: fontSize, weight: fontWeight)
+                        // Fallback to system font if font not found
+                        label.font = UIFont.systemFont(ofSize: finalFontSize, weight: finalFontWeight)
                     }
                 }
             } else {
-                // Try to use a pre-installed font by name
-                if let font = UIFont(name: fontFamily, size: fontSize) {
-                    // Apply weight if needed
-                    if fontWeight != .regular {
-                        let descriptor = font.fontDescriptor.addingAttributes([
-                            .traits: [UIFontDescriptor.TraitKey.weight: fontWeight]
-                        ])
-                        label.font = UIFont(descriptor: descriptor, size: fontSize)
-                    } else {
-                        label.font = font
-                    }
-                } else {
-                    // Fallback to system font if font not found
-                    label.font = UIFont.systemFont(ofSize: fontSize, weight: fontWeight)
-                }
+                // Use system font with the specified size and weight
+                label.font = UIFont.systemFont(ofSize: finalFontSize, weight: finalFontWeight)
             }
-        } else {
-            // Use system font with the specified size and weight
-            label.font = UIFont.systemFont(ofSize: fontSize, weight: fontWeight)
         }
         
-        // Set text color if specified
+        // Set text color if specified (preserve current color if not in props)
         if let color = props["color"] as? String {
             // Safely parse the color string - will use a default color if the string is invalid
             label.textColor = ColorUtilities.color(fromHexString:color)
         }
+        // Note: Don't reset color if not specified in props - preserve current color
         
-        // Set text alignment if specified
+        // Set text alignment if specified (preserve current alignment if not in props)
         if let textAlign = props["textAlign"] as? String {
             switch textAlign {
             case "center":
@@ -103,11 +122,13 @@ class DCFTextComponent: NSObject, DCFComponent, ComponentMethodHandler {
                 label.textAlignment = .left
             }
         }
+        // Note: Don't reset alignment if not specified in props - preserve current alignment
         
-        // Set number of lines if specified
+        // Set number of lines if specified (preserve current numberOfLines if not in props)
         if let numberOfLines = props["numberOfLines"] as? Int {
             label.numberOfLines = numberOfLines
         }
+        // Note: Don't reset numberOfLines if not specified in props - preserve current value
         
         return true
     }

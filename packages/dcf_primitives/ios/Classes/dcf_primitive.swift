@@ -27,6 +27,6 @@ import dcflight
         DCFComponentRegistry.shared.registerComponent("AnimatedView", componentClass: DCFAnimatedViewComponent.self)
         DCFComponentRegistry.shared.registerComponent("AnimatedText", componentClass: DCFAnimatedTextComponent.self)
         
-        print("✅ DCF Primitives: All components registered successfully")
+        NSLog("✅ DCF Primitives: All components registered successfully")
     }
 }
