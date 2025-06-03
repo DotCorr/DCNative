@@ -93,6 +93,14 @@ class DCFGo extends StatefulComponent {
 ```
 
 
+# Buy Me A Coffee Below
+*** Any contribution would serve as a motivation to keep going
+
+buy_me_a_coffee: https://coff.ee/squirelboy360
+
+
+
+
 ### 3️⃣ Initially Inspired React
 
 The architecture is loosely inspired by Flutter and React, Flutter Engine serves as the dart runtime, more like Hermes for React Native. The syntax has been made flutter-like for familiarity and has borrowed concepts like state hooks and vdom-like architecture from React Native.
