@@ -70,7 +70,8 @@ class DCFText extends StatelessComponent {
     required this.content,
     this.textProps = const TextProps(),
        this.layout = const LayoutProps(
-      flex: 1
+        
+      height: 50,width: 200
     ),
     this.style = const StyleSheet(),
     this.events,
@@ -78,8 +79,8 @@ class DCFText extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
-    return VDomElement(
+  DCFComponentNode render() {
+    return DCFElement(
       type: 'Text',
       props: {
         'content': content,

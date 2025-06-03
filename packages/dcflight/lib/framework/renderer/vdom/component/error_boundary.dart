@@ -1,6 +1,6 @@
 import 'dart:developer' as developer;
 
-import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
+import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 
 import 'component.dart';
 
@@ -47,10 +47,10 @@ abstract class ErrorBoundary extends StatefulComponent {
   StackTrace? get stackTrace => _stackTrace;
 
   /// Render fallback UI when error occurs
-  VDomNode renderFallback(Object error, StackTrace? stackTrace);
+  DCFComponentNode renderFallback(Object error, StackTrace? stackTrace);
 
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     if (_hasError) {
       return renderFallback(_error!, _stackTrace);
     }
@@ -59,5 +59,5 @@ abstract class ErrorBoundary extends StatefulComponent {
   }
 
   /// Render content when no error
-  VDomNode renderContent();
+  DCFComponentNode renderContent();
 }

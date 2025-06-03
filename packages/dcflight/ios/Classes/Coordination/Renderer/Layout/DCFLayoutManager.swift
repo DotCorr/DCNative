@@ -2,8 +2,7 @@ import UIKit
 import yoga
 
 /// Manages layout for DCMAUI components
-/// Note: Primary layout calculations occur on the Dart side
-/// This class primarily handles applying calculated layouts and handling absolute positioning
+/// Now handles automatic layout calculations natively when layout props change
 class DCFLayoutManager {
     // Singleton instance
     static let shared = DCFLayoutManager()
@@ -18,10 +17,54 @@ class DCFLayoutManager {
     private var pendingLayouts = [String: CGRect]()
     private var isLayoutUpdateScheduled = false
     
+    // ADDED: Track when layout calculation is needed
+    private var needsLayoutCalculation = false
+    private var layoutCalculationTimer: Timer?
+    
     // ADDED: Dedicated queue for layout operations
     private let layoutQueue = DispatchQueue(label: "com.dcmaui.layoutQueue", qos: .userInitiated)
     
     private init() {}
+    
+    // MARK: - Automatic Layout Calculation
+    
+    /// Schedule automatic layout calculation when layout props change
+    private func scheduleLayoutCalculation() {
+        // Cancel existing timer
+        layoutCalculationTimer?.invalidate()
+        
+        // Schedule new calculation with debouncing (100ms delay)
+        layoutCalculationTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: false) { _ in
+            self.performAutomaticLayoutCalculation()
+        }
+    }
+    
+    /// Perform automatic layout calculation
+    private func performAutomaticLayoutCalculation() {
+        guard needsLayoutCalculation else { return }
+        
+        // Use layout queue for calculation
+        layoutQueue.async {
+            // Get screen dimensions
+            let screenBounds = UIScreen.main.bounds
+            
+            // Calculate layout using YogaShadowTree
+            let success = YogaShadowTree.shared.calculateAndApplyLayout(
+                width: screenBounds.width, 
+                height: screenBounds.height
+            )
+            
+            // Update flag on main thread
+            DispatchQueue.main.async {
+                self.needsLayoutCalculation = false
+                if success {
+                    print("✅ Automatic layout calculation completed successfully")
+                } else {
+                    print("❌ Automatic layout calculation failed")
+                }
+            }
+        }
+    }
     
     // MARK: - View Registry Management
     
@@ -238,20 +281,69 @@ extension DCFLayoutManager {
         // Let the component know it's registered - this allows each component
         // to handle its own specialized registration logic
         componentInstance.viewRegisteredWithShadowTree(view, nodeId: nodeId)
+        
+        // ADDED: If this is a root view, trigger initial layout calculation
+        if nodeId == "root" {
+            print("🌱 Root view registered, triggering initial layout calculation")
+            triggerLayoutCalculation()
+        }
     }
     
     // Add a child node to a parent in the layout tree
     func addChildNode(parentId: String, childId: String, index: Int) {
         YogaShadowTree.shared.addChildNode(parentId: parentId, childId: childId, index: index)
+        
+        // ADDED: Trigger layout calculation when tree structure changes
+        needsLayoutCalculation = true
+        scheduleLayoutCalculation()
+        
+        print("📐 Child node \(childId) added to \(parentId), automatic layout calculation scheduled")
     }
     
     // Remove a node from the layout tree
     func removeNode(nodeId: String) {
         YogaShadowTree.shared.removeNode(nodeId: nodeId)
+        
+        // ADDED: Trigger layout calculation when tree structure changes
+        needsLayoutCalculation = true
+        scheduleLayoutCalculation()
+        
+        print("📐 Node \(nodeId) removed, automatic layout calculation scheduled")
     }
     
     // Update a node's layout properties
     func updateNodeWithLayoutProps(nodeId: String, componentType: String, props: [String: Any]) {
         YogaShadowTree.shared.updateNodeLayoutProps(nodeId: nodeId, props: props)
+        
+        // ADDED: Trigger automatic layout calculation when layout props change
+        needsLayoutCalculation = true
+        scheduleLayoutCalculation()
+        
+        print("📐 Layout props updated for \(nodeId), automatic layout calculation scheduled")
+    }
+    
+    // Manually trigger layout calculation (useful for initial layout or when needed)
+    func triggerLayoutCalculation() {
+        needsLayoutCalculation = true
+        scheduleLayoutCalculation()
+    }
+    
+    /// Force immediate layout calculation (synchronous)
+    func calculateLayoutNow() {
+        layoutQueue.async {
+            let screenBounds = UIScreen.main.bounds
+            let success = YogaShadowTree.shared.calculateAndApplyLayout(
+                width: screenBounds.width, 
+                height: screenBounds.height
+            )
+            
+            DispatchQueue.main.async {
+                if success {
+                    print("✅ Manual layout calculation completed successfully")
+                } else {
+                    print("❌ Manual layout calculation failed")
+                }
+            }
+        }
     }
 }

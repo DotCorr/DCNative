@@ -32,15 +32,8 @@ class DCMauiLayoutMethodHandler: NSObject {
             return
         }
         
-        // Handle methods
+        // Handle methods - only non-layout methods are exposed to Dart
         switch call.method {
-        case "calculateLayout":
-            handleCalculateLayout(args, result: result)
-            
-        case "updateViewLayout":
-            handleUpdateViewLayout(args, result: result)
-            
-            
         case "getScreenDimensions":
             handleGetScreenDimensions(result: result)
             
@@ -48,44 +41,6 @@ class DCMauiLayoutMethodHandler: NSObject {
             result(FlutterMethodNotImplemented)
         }
     }
-    
-    // Calculate layout for the entire view hierarchy
-    private func handleCalculateLayout(_ args: [String: Any], result: @escaping FlutterResult) {
-        // Use dedicated layout background queue - never on UI thread
-        DispatchQueue(label: "com.dcmaui.layoutCalculation", qos: .userInitiated).async {
-            // Calculate layout
-            let success = YogaShadowTree.shared.calculateAndApplyLayout(width: self.frame.width, height: self.frame.height)
-            
-            // Send result on the main thread
-            DispatchQueue.main.async {
-                result(success)
-            }
-        }
-    }
-    
-    // Update the layout of a specific view
-    private func handleUpdateViewLayout(_ args: [String: Any], result: @escaping FlutterResult) {
-        guard let viewId = args["viewId"] as? String,
-              let left = args["left"] as? CGFloat,
-              let top = args["top"] as? CGFloat,
-              let width = args["width"] as? CGFloat,
-              let height = args["height"] as? CGFloat else {
-            result(FlutterError(code: "LAYOUT_ERROR", message: "Invalid layout parameters", details: nil))
-            return
-        }
-        
-        // Apply layout without main thread
-        let success = DCFLayoutManager.shared.queueLayoutUpdate(
-            to: viewId,
-            left: left,
-            top: top,
-            width: width,
-            height: height
-        )
-        
-        result(success)
-    }
-
     
     // Get screen dimensions
     private func handleGetScreenDimensions(result: @escaping FlutterResult) {

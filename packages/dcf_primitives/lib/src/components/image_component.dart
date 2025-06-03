@@ -1,12 +1,13 @@
 import 'package:dcflight/dcflight.dart';
+import '../types/component_types.dart' as types;
 
 /// Image properties
 class ImageProps {
   /// The image source URI (can be a network URL or local resource)
   final String source;
   
-  /// Resize mode for the image
-  final String? resizeMode;
+  /// Resize mode for the image - type-safe enum
+  final types.DCFImageResizeMode? resizeMode;
   
   /// Whether to fade in the image when loaded
   final bool? fadeDuration;
@@ -27,7 +28,7 @@ class ImageProps {
     return {
       'source': source,
       'isRelativePath': false,
-      if (resizeMode != null) 'resizeMode': resizeMode,
+      if (resizeMode != null) 'resizeMode': resizeMode!.name,
       if (fadeDuration != null) 'fadeDuration': fadeDuration,
       if (placeholder != null) 'placeholder': placeholder,
     };
@@ -58,7 +59,7 @@ class DCFImage extends StatelessComponent {
   DCFImage({
     required this.imageProps,
        this.layout = const LayoutProps(
-      flex: 1
+     height: 50,width: 200
     ),
     this.style = const StyleSheet(),
     this.onLoad,
@@ -68,7 +69,7 @@ class DCFImage extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     // Create an events map for callbacks
     Map<String, dynamic> eventMap = events ?? {};
     
@@ -80,7 +81,7 @@ class DCFImage extends StatelessComponent {
       eventMap['onError'] = onError;
     }
     
-    return VDomElement(
+    return DCFElement(
       type: 'Image',
       props: {
         ...imageProps.toMap(),

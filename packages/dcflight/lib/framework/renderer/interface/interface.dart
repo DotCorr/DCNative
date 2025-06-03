@@ -46,11 +46,8 @@ abstract class PlatformInterface {
   /// Set a global event handler for all events
   void setEventHandler(Function(String viewId, String eventType, Map<String, dynamic> eventData) handler);
 
-  /// Update the layout of a view
-  Future<bool> updateViewLayout(String viewId, double left, double top, double width, double height);
-
-  /// Calculate layout for the entire view hierarchy
-  Future<bool> calculateLayout();
+  // REMOVED: updateViewLayout and calculateLayout methods
+  // Layout is now calculated automatically when layout props change
 
   /// Call a method on a specific component instance
   Future<dynamic> callComponentMethod(String viewId, String methodName, Map<String, dynamic> args);

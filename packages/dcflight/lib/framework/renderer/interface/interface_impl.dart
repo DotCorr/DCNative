@@ -226,37 +226,8 @@ class PlatformInterfaceImpl implements PlatformInterface {
     _eventHandler = handler;
   }
 
-  @override
-  Future<bool> updateViewLayout(String viewId, double left, double top,
-      double width, double height) async {
-    try {
-      final result =
-          await layoutChannel.invokeMethod<bool>('updateViewLayout', {
-        'viewId': viewId,
-        'left': left,
-        'top': top,
-        'width': width,
-        'height': height,
-      });
-
-      return result ?? false;
-    } catch (e) {
-      debugPrint('Error updating view layout: $e');
-      return false;
-    }
-  }
-
-  @override
-  Future<bool> calculateLayout() async {
-    try {
-      final result =
-          await layoutChannel.invokeMethod<bool>('calculateLayout', {});
-      return result ?? false;
-    } catch (e) {
-      debugPrint('Error calculating layout: $e');
-      return false;
-    }
-  }
+  // REMOVED: updateViewLayout and calculateLayout methods
+  // Layout is now calculated automatically when layout props change
 
   @override
   Future<dynamic> callComponentMethod(

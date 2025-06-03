@@ -3,16 +3,16 @@ import 'package:dcflight/dcflight.dart';
 
 
 /// Represents an element in the Virtual DOM tree
-class VDomElement extends VDomNode {
+class DCFElement extends DCFComponentNode {
   /// Type of the element (e.g., 'View', 'Text', 'Button')
   final String type;
 
   /// Properties of the element
   Map<String, dynamic> props;
   /// Child nodes
-  final List<VDomNode> children;
+  final List<DCFComponentNode> children;
 
-  VDomElement({
+  DCFElement({
     required this.type,
     super.key,
     required this.props,
@@ -25,8 +25,8 @@ class VDomElement extends VDomNode {
   }
 
   @override
-  VDomNode clone() {
-    return VDomElement(
+  DCFComponentNode clone() {
+    return DCFElement(
       type: type,
       key: key,
       props: Map<String, dynamic>.from(props),
@@ -35,8 +35,8 @@ class VDomElement extends VDomNode {
   }
 
   @override
-  bool equals(VDomNode other) {
-    if (other is! VDomElement) return false;
+  bool equals(DCFComponentNode other) {
+    if (other is! DCFElement) return false;
     if (type != other.type) return false;
     if (key != other.key) return false;
 
@@ -49,11 +49,11 @@ class VDomElement extends VDomNode {
   }
 
   /// Get all descendant nodes flattened into a list
-  List<VDomNode> get allDescendants {
-    final result = <VDomNode>[];
+  List<DCFComponentNode> get allDescendants {
+    final result = <DCFComponentNode>[];
     for (final child in children) {
       result.add(child);
-      if (child is VDomElement) {
+      if (child is DCFElement) {
         result.addAll(child.allDescendants);
       }
     }
@@ -89,7 +89,7 @@ class VDomElement extends VDomNode {
   }
 
   @override
-  void mount(VDomNode? parent) {
+  void mount(DCFComponentNode? parent) {
     this.parent = parent;
 
     // Call mount on children

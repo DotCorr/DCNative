@@ -3,7 +3,7 @@ import 'package:dcflight/dcflight.dart';
 /// A touchable opacity component implementation using StatelessComponent
 class DCFTouchableOpacity extends StatelessComponent {
   /// Child nodes
-  final List<VDomNode> children;
+  final List<DCFComponentNode> children;
   
   /// Opacity when pressed
   final double activeOpacity;
@@ -39,7 +39,7 @@ class DCFTouchableOpacity extends StatelessComponent {
   DCFTouchableOpacity({
     required this.children,
     this.activeOpacity = 0.2,
-    this.layout = const LayoutProps(),
+    this.layout = const LayoutProps(padding: 8, height: 50,width: 200),
     this.style = const StyleSheet(),
     this.onPress,
     this.onPressIn,
@@ -52,7 +52,7 @@ class DCFTouchableOpacity extends StatelessComponent {
   });
   
   @override
-  VDomNode render() {
+  DCFComponentNode render() {
     // Create an events map for callbacks
     Map<String, dynamic> eventMap = events ?? {};
     
@@ -72,7 +72,7 @@ class DCFTouchableOpacity extends StatelessComponent {
       eventMap['onLongPress'] = onLongPress;
     }
     
-    return VDomElement(
+    return DCFElement(
       type: 'TouchableOpacity',
       props: {
         'activeOpacity': activeOpacity,

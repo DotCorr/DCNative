@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import 'package:dcflight/framework/renderer/interface/interface.dart' show PlatformInterface;
-import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_element.dart';
+import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
+import 'package:dcflight/framework/renderer/vdom/component/dcf_element.dart';
 import 'vdom.dart';
 
 /// Main API for VDOM operations
@@ -40,19 +40,19 @@ class VDomAPI {
   Future<void> get isReady => _readyCompleter.future;
   
   /// Create a root component
-  Future<void> createRoot(VDomNode component) async {
+  Future<void> createRoot(DCFComponentNode component) async {
     await isReady;
     return _vdom.createRoot(component);
   }
   
   /// Create an element
-  VDomElement createElement(
+  DCFElement createElement(
     String type, {
     Map<String, dynamic>? props,
-    List<VDomNode>? children,
+    List<DCFComponentNode>? children,
     String? key,
   }) {
-    return VDomElement(
+    return DCFElement(
       type: type,
       props: props ?? {},
       children: children ?? [],
@@ -60,14 +60,11 @@ class VDomAPI {
     );
   }
   
-  /// Calculate and apply layout
-  Future<void> calculateLayout() async {
-    await isReady;
-    return _vdom.calculateAndApplyLayout();
-  }
+  // REMOVED: calculateLayout method
+  // Layout is now calculated automatically when layout props change
   
   /// Render a node to native UI
-  Future<String?> renderToNative(VDomNode node,
+  Future<String?> renderToNative(DCFComponentNode node,
       {String? parentViewId, int? index}) async {
     await isReady;
     return _vdom.renderToNative(node, parentViewId: parentViewId, index: index);

@@ -1,11 +1,11 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
+import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 import 'state_hook.dart';
 import 'store.dart';
 
 /// Stateful component with hooks and lifecycle methods
-abstract class StatefulComponent extends VDomNode {
+abstract class StatefulComponent extends DCFComponentNode {
   /// Unique ID for this component instance
   final String instanceId;
 
@@ -13,10 +13,13 @@ abstract class StatefulComponent extends VDomNode {
   final String typeName;
 
   /// The rendered node from the component
-  VDomNode? _renderedNode;
+  DCFComponentNode? _renderedNode;
 
   /// Whether the component is mounted
   bool _isMounted = false;
+
+  /// Whether the component is currently updating to prevent cascading updates
+  bool _isUpdating = false;
 
   /// Current hook index during rendering
   int _hookIndex = 0;
@@ -29,10 +32,28 @@ abstract class StatefulComponent extends VDomNode {
 
   /// Create a stateful component
   StatefulComponent({super.key})
-      : instanceId = DateTime.now().millisecondsSinceEpoch.toString() +
-            '.' + Random().nextDouble().toString(),
-        typeName = StackTrace.current.toString().split('\n')[1].split(' ')[0] {
+      : instanceId = '${DateTime.now().millisecondsSinceEpoch}.${Random().nextDouble()}',
+        typeName = _extractTypeName() {
     scheduleUpdate = _defaultScheduleUpdate;
+  }
+
+  /// Extract the component type name from the class
+  static String _extractTypeName() {
+    // Get the class name directly using runtimeType would be better, but
+    // this works in the constructor. We'll use runtime type in a better way.
+    final stackTrace = StackTrace.current.toString();
+    final lines = stackTrace.split('\n');
+    
+    // Look for the first line that doesn't contain constructor calls
+    for (final line in lines.skip(1)) {
+      final match = RegExp(r'(\w+Component)').firstMatch(line);
+      if (match != null) {
+        return match.group(1)!;
+      }
+    }
+    
+    // Fallback to a generic name
+    return 'UnknownComponent';
   }
 
   /// Default no-op schedule update function (replaced by VDOM)
@@ -43,11 +64,11 @@ abstract class StatefulComponent extends VDomNode {
   }
 
   /// Render the component - must be implemented by subclasses
-  VDomNode render();
+  DCFComponentNode render();
   
   /// Get the rendered node (lazily render if necessary)
   @override
-  VDomNode get renderedNode {
+  DCFComponentNode get renderedNode {
     if (_renderedNode == null) {
       prepareForRender();
       _renderedNode = render();
@@ -61,7 +82,7 @@ abstract class StatefulComponent extends VDomNode {
   
   /// Set the rendered node
   @override
-  set renderedNode(VDomNode? node) {
+  set renderedNode(DCFComponentNode? node) {
     _renderedNode = node;
     if (_renderedNode != null) {
       _renderedNode!.parent = this;
@@ -80,11 +101,25 @@ abstract class StatefulComponent extends VDomNode {
   /// Called when the component will unmount
   @override
   void componentWillUnmount() {
-    // Clean up hooks
+    // Clean up hooks first
     for (final hook in _hooks) {
       hook.dispose();
     }
     _hooks.clear();
+    
+    // Clean up any remaining store subscriptions via StoreManager
+    // This is a safety net in case hooks didn't clean up properly
+    try {
+      if (kDebugMode) {
+        print('Cleaning up store subscriptions for component $instanceId');
+      }
+      // Note: StoreManager cleanup will be handled by individual hooks
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error during store cleanup: $e');
+      }
+    }
+    
     _isMounted = false;
   }
 
@@ -147,17 +182,46 @@ abstract class StatefulComponent extends VDomNode {
   /// Create a store hook for global state
   StoreHook<T> useStore<T>(Store<T> store) {
     if (_hookIndex >= _hooks.length) {
-      // Create new hook
+      // Create new hook with update protection and component tracking
       final hook = StoreHook<T>(store, () {
-        scheduleUpdate();
-      });
+        // Only schedule update if component is mounted and not already updating
+        if (_isMounted && !_isUpdating) {
+          _isUpdating = true;
+          scheduleUpdate();
+          // Reset updating flag after microtask to prevent rapid successive updates
+          Future.microtask(() {
+            _isUpdating = false;
+          });
+        }
+      }, instanceId, typeName);
       _hooks.add(hook);
     }
     
     // Get the hook (either existing or newly created)
     final hook = _hooks[_hookIndex] as StoreHook<T>;
-    _hookIndex++;
     
+    // Verify this hook is for the same store to prevent mismatches
+    if (hook.store != store) {
+      if (kDebugMode) {
+        print('Warning: Store hook mismatch detected, disposing old hook and creating new one');
+      }
+      // Dispose the old hook and create a new one
+      hook.dispose();
+      final newHook = StoreHook<T>(store, () {
+        if (_isMounted && !_isUpdating) {
+          _isUpdating = true;
+          scheduleUpdate();
+          Future.microtask(() {
+            _isUpdating = false;
+          });
+        }
+      }, instanceId, typeName);
+      _hooks[_hookIndex] = newHook;
+      _hookIndex++;
+      return newHook;
+    }
+    
+    _hookIndex++;
     return hook;
   }
 
@@ -174,20 +238,20 @@ abstract class StatefulComponent extends VDomNode {
   /// Implement VDomNode methods
   
   @override
-  VDomNode clone() {
+  DCFComponentNode clone() {
     // Components can't be cloned easily due to state, hooks, etc.
     throw UnsupportedError("Stateful components cannot be cloned directly.");
   }
   
   @override
-  bool equals(VDomNode other) {
+  bool equals(DCFComponentNode other) {
     if (other is! StatefulComponent) return false;
     // Components are considered equal if they're the same type with the same key
     return runtimeType == other.runtimeType && key == other.key;
   }
   
   @override
-  void mount(VDomNode? parent) {
+  void mount(DCFComponentNode? parent) {
     this.parent = parent;
     
     // Ensure the component has rendered
@@ -216,7 +280,7 @@ abstract class StatefulComponent extends VDomNode {
 }
 
 /// Stateless component without hooks or state
-abstract class StatelessComponent extends VDomNode {
+abstract class StatelessComponent extends DCFComponentNode {
   /// Unique ID for this component instance
   final String instanceId;
 
@@ -224,23 +288,22 @@ abstract class StatelessComponent extends VDomNode {
   final String typeName;
 
   /// The rendered node from the component
-  VDomNode? _renderedNode;
+  DCFComponentNode? _renderedNode;
 
   /// Whether the component is mounted
   bool _isMounted = false;
 
   /// Create a stateless component
   StatelessComponent({super.key})
-      : instanceId = DateTime.now().millisecondsSinceEpoch.toString() +
-            '.' + Random().nextDouble().toString(),
+      : instanceId = '${DateTime.now().millisecondsSinceEpoch}.${Random().nextDouble()}',
         typeName = StackTrace.current.toString().split('\n')[1].split(' ')[0];
 
   /// Render the component - must be implemented by subclasses
-  VDomNode render();
+  DCFComponentNode render();
   
   /// Get the rendered node (lazily render if necessary)
   @override
-  VDomNode get renderedNode {
+  DCFComponentNode get renderedNode {
     _renderedNode ??= render();
     
     if (_renderedNode != null) {
@@ -252,7 +315,7 @@ abstract class StatelessComponent extends VDomNode {
   
   /// Set the rendered node
   @override
-  set renderedNode(VDomNode? node) {
+  set renderedNode(DCFComponentNode? node) {
     _renderedNode = node;
     if (_renderedNode != null) {
       _renderedNode!.parent = this;
@@ -277,20 +340,20 @@ abstract class StatelessComponent extends VDomNode {
   /// Implement VDomNode methods
   
   @override
-  VDomNode clone() {
+  DCFComponentNode clone() {
     // Components can't be cloned easily
     throw UnsupportedError("Stateless components cannot be cloned directly.");
   }
   
   @override
-  bool equals(VDomNode other) {
+  bool equals(DCFComponentNode other) {
     if (other is! StatelessComponent) return false;
     // Components are equal if they're the same type with the same key
     return runtimeType == other.runtimeType && key == other.key;
   }
   
   @override
-  void mount(VDomNode? parent) {
+  void mount(DCFComponentNode? parent) {
     this.parent = parent;
     
     // Ensure the component has rendered

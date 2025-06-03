@@ -14,7 +14,8 @@ class SupportedLayoutsProps {
         "left", "top", "right", "bottom", "position",
         "flexDirection", "justifyContent", "alignItems", "alignSelf", "alignContent",
         "flexWrap", "flex", "flexGrow", "flexShrink", "flexBasis",
-        "display", "overflow", "direction", "borderWidth"
+        "display", "overflow", "direction", "borderWidth",
+        "aspectRatio", "gap", "rowGap", "columnGap"
     ]
 }
 
@@ -63,6 +64,137 @@ class ViewRegistry {
     // Clean up views
     func cleanup() {
         registry.removeAll()
+    }
+}
+
+/// Main view manager that coordinates between all view-related systems
+class DCFViewManager {
+    // Singleton instance
+    static let shared = DCFViewManager()
+    
+    private init() {}
+    
+    /// Create a view with automatic layout handling
+    func createView(viewId: String, viewType: String, props: [String: Any]) -> Bool {
+        // Get component type
+        guard let componentType = DCFComponentRegistry.shared.getComponentType(for: viewType) else {
+            print("❌ Component not found for type: \(viewType)")
+            return false
+        }
+        
+        // Create component instance and view
+        let componentInstance = componentType.init()
+        let view = componentInstance.createView(props: props)
+        
+        // Tag the view with its component type for event registration
+        objc_setAssociatedObject(
+            view,
+            UnsafeRawPointer(bitPattern: "componentType".hashValue)!,
+            viewType,
+            .OBJC_ASSOCIATION_RETAIN_NONATOMIC
+        )
+        
+        // Register the view
+        ViewRegistry.shared.registerView(view, id: viewId, type: viewType)
+        
+        // Create shadow tree node
+        YogaShadowTree.shared.createNode(id: viewId, componentType: viewType)
+        
+        // Register with layout manager
+        DCFLayoutManager.shared.registerView(view, withNodeId: viewId, componentType: viewType, componentInstance: componentInstance)
+        
+        // Apply layout props if any
+        let layoutProps = extractLayoutProps(from: props)
+        if !layoutProps.isEmpty {
+            DCFLayoutManager.shared.updateNodeWithLayoutProps(
+                nodeId: viewId,
+                componentType: viewType,
+                props: layoutProps
+            )
+        }
+        
+        print("✅ Created view \(viewId) of type \(viewType)")
+        return true
+    }
+    
+    /// Update a view with automatic layout handling
+    func updateView(viewId: String, props: [String: Any]) -> Bool {
+        guard let viewInfo = ViewRegistry.shared.getViewInfo(id: viewId) else {
+            print("❌ View not found: \(viewId)")
+            return false
+        }
+        
+        let view = viewInfo.view
+        let viewType = viewInfo.type
+        
+        // Separate layout props from other props
+        let layoutProps = extractLayoutProps(from: props)
+        let nonLayoutProps = props.filter { !layoutProps.keys.contains($0.key) }
+        
+        // Update layout props if any
+        if !layoutProps.isEmpty {
+            DCFLayoutManager.shared.updateNodeWithLayoutProps(
+                nodeId: viewId,
+                componentType: viewType,
+                props: layoutProps
+            )
+        }
+        
+        // Update non-layout props
+        if !nonLayoutProps.isEmpty {
+            guard let componentType = DCFComponentRegistry.shared.getComponentType(for: viewType) else {
+                print("❌ Component type not found for: \(viewType)")
+                return false
+            }
+            
+            let componentInstance = componentType.init()
+            let success = componentInstance.updateView(view, withProps: nonLayoutProps)
+            
+            if !success {
+                print("❌ Failed to update view \(viewId)")
+                return false
+            }
+        }
+        
+        print("✅ Updated view \(viewId)")
+        return true
+    }
+    
+    /// Delete a view with automatic cleanup
+    func deleteView(viewId: String) -> Bool {
+        // Remove from registries
+        ViewRegistry.shared.removeView(id: viewId)
+        DCFLayoutManager.shared.removeNode(nodeId: viewId)
+        
+        print("✅ Deleted view \(viewId)")
+        return true
+    }
+    
+    /// Attach a child view to a parent
+    func attachView(childId: String, parentId: String, index: Int) -> Bool {
+        guard let childView = ViewRegistry.shared.getView(id: childId),
+              let parentView = ViewRegistry.shared.getView(id: parentId) else {
+            print("❌ Views not found for attachment: child=\(childId), parent=\(parentId)")
+            return false
+        }
+        
+        // Add to view hierarchy
+        if index >= 0 && index < parentView.subviews.count {
+            parentView.insertSubview(childView, at: index)
+        } else {
+            parentView.addSubview(childView)
+        }
+        
+        // Update layout tree
+        DCFLayoutManager.shared.addChildNode(parentId: parentId, childId: childId, index: index)
+        
+        print("✅ Attached view \(childId) to \(parentId) at index \(index)")
+        return true
+    }
+    
+    /// Extract layout properties from props dictionary
+    private func extractLayoutProps(from props: [String: Any]) -> [String: Any] {
+        return props.filter { SupportedLayoutsProps.supportedLayoutProps.contains($0.key) }
     }
 }
 

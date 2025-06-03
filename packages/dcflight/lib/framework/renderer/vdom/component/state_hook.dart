@@ -23,10 +23,10 @@ class StateHook<T> extends Hook {
   StateHook(this._value, this._name, this._scheduleUpdate);
 
   /// Get the current value
-  T get value => _value;
+  T get state => _value;
 
   /// Set the value and trigger update
-  void setValue(T newValue) {
+  void setState(T newValue) {
     // Only update and trigger render if value actually changed
     if (_value != newValue) {
       _value = newValue;
@@ -150,21 +150,55 @@ class StoreHook<T> extends Hook {
   /// The store
   final Store<T> _store;
   
+  /// Component information for tracking
+  final String? _componentId;
+  final String? _componentType;
+  
+  /// Get the store (for hook validation)
+  Store<T> get store => _store;
+  
   /// State change callback
   final Function() _onChange;
   
   /// Listener function reference for unsubscribing
   late final void Function(T) _listener;
+  
+  /// Flag to track if we're subscribed to prevent double subscription
+  bool _isSubscribed = false;
+  
+  /// Debounce flag to prevent multiple rapid updates
+  bool _updatePending = false;
 
   /// Create a store hook
-  StoreHook(this._store, this._onChange) {
-    // Create listener function that triggers component update
+  StoreHook(this._store, this._onChange, [this._componentId, this._componentType]) {
+    // Track hook access for usage validation
+    if (_componentId != null && _componentType != null) {
+      _store.trackHookAccess(_componentId, _componentType);
+    }
+    
+    // Create listener function that triggers component update with debouncing
     _listener = (T _) {
-      _onChange();
+      // Prevent multiple rapid-fire updates by debouncing
+      if (_updatePending) {
+        return;
+      }
+      
+      _updatePending = true;
+      
+      // Use microtask to batch multiple store updates together
+      Future.microtask(() {
+        if (_updatePending && _isSubscribed) {
+          _updatePending = false;
+          _onChange();
+        }
+      });
     };
     
-    // Subscribe to store changes
-    _store.subscribe(_listener);
+    // Subscribe to store changes only once
+    if (!_isSubscribed) {
+      _store.subscribe(_listener);
+      _isSubscribed = true;
+    }
   }
 
   /// Get current state
@@ -183,6 +217,10 @@ class StoreHook<T> extends Hook {
   @override
   void dispose() {
     // Unsubscribe from store on disposal
-    _store.unsubscribe(_listener);
+    if (_isSubscribed) {
+      _store.unsubscribe(_listener);
+      _isSubscribed = false;
+    }
+    _updatePending = false;
   }
 }

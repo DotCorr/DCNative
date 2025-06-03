@@ -21,12 +21,15 @@ import dcflight
         // Register interaction primitives
         DCFComponentRegistry.shared.registerComponent("GestureDetector", componentClass: DCFGestureDetectorComponent.self)
         DCFComponentRegistry.shared.registerComponent("TouchableOpacity", componentClass: DCFTouchableOpacityComponent.self)
-        DCFComponentRegistry.shared.registerComponent("PageView", componentClass: DCFPageViewComponent.self)
-        
         // Register animation primitives
         DCFComponentRegistry.shared.registerComponent("AnimatedView", componentClass: DCFAnimatedViewComponent.self)
         DCFComponentRegistry.shared.registerComponent("AnimatedText", componentClass: DCFAnimatedTextComponent.self)
         
-        NSLog("✅ DCF Primitives: All components registered successfully")
+        // Register new cross-platform primitives
+        DCFComponentRegistry.shared.registerComponent("TextInput", componentClass: DCFTextInputComponent.self)
+        DCFComponentRegistry.shared.registerComponent("Dropdown", componentClass: DCFDropdownComponent.self)
+        DCFComponentRegistry.shared.registerComponent("FlatList", componentClass: DCFFlatListComponent.self)
+        
+        NSLog("✅ DCF Primitives: All components registered successfully (including new cross-platform primitives)")
     }
 }

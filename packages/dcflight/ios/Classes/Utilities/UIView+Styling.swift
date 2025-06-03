@@ -3,7 +3,7 @@ import UIKit
 // UIView extension for generic style application
 extension UIView {
     /// Apply common style properties to this view, driven only by explicit props.
-    func applyStyles(props: [String: Any]) {
+    public func applyStyles(props: [String: Any]) {
         // Debug log for applied props
         // print("🎨 Applying generic styles to \(type(of: self)) [ID: \(self.accessibilityIdentifier ?? "nil")] : \(props.keys.joined(separator: ", "))")
 

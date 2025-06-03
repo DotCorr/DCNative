@@ -1,8 +1,10 @@
+
+import 'package:dcf_go/app/index.dart';
+import 'package:dcf_go/app/test/component+state/validation_test.dart';
 import 'package:dcflight/dcflight.dart';
-import 'app/app.dart';
 
 void main() {
-  DCFlight.start(app: DCFGo());
+  DCFlight.start(app: Index());
 }
 
 

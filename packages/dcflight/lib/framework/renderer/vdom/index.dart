@@ -12,11 +12,11 @@ export 'component/component.dart';
 export 'component/state_hook.dart';
 
 // Re-export fragment
-export 'component/fragment.dart';
+export 'experimental_stash/fragment.dart';
 
 // Re-export element and node classes
-export 'vdom_node.dart';
-export 'vdom_element.dart';
+export 'component/component_node.dart';
+export 'component/dcf_element.dart';
 
 // Re-export error boundary
 export 'component/error_boundary.dart';

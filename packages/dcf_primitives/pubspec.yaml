@@ -28,6 +28,9 @@ flutter:
     platforms:
       ios:
         pluginClass: DcfPrimitives
+      # android:
+      #   package: com.dcflight.dcf_primitives
+      #   pluginClass: DcfPrimitivesPlugin
 
   assets:
     - assets/icons/

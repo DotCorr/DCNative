@@ -178,16 +178,6 @@ extension UIFont {
         return nil
     }
     
-    // Get intrinsic content size
-    func getIntrinsicSize(_ view: UIView, forProps props: [String: Any]) -> CGSize {
-        guard let label = view as? UILabel else { return CGSize(width: 0, height: 0) }
-        
-        // Force layout if needed
-        if label.bounds.size.width == 0 {
-            return label.intrinsicContentSize
-        }
-        
-        return label.sizeThatFits(CGSize(width: label.bounds.width, height: CGFloat.greatestFiniteMagnitude))
-    }
+
     
     

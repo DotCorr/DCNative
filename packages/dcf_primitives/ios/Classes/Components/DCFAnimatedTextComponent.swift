@@ -28,23 +28,10 @@ class DCFAnimatedTextComponent: NSObject, DCFComponent, ComponentMethodHandler {
         // Get font size (default to system font size if not specified)
         let fontSize = props["fontSize"] as? CGFloat ?? UIFont.systemFontSize
         
-        // Determine font weight
+        // Determine font weight using centralized utility
         var fontWeight = UIFont.Weight.regular
         if let fontWeightString = props["fontWeight"] as? String {
-            switch fontWeightString.lowercased() {
-            case "bold":
-                fontWeight = .bold
-            case "semibold":
-                fontWeight = .semibold
-            case "medium":
-                fontWeight = .medium
-            case "light":
-                fontWeight = .light
-            case "thin":
-                fontWeight = .thin
-            default:
-                fontWeight = .regular
-            }
+            fontWeight = fontWeightFromString(fontWeightString)
         }
         
         // Check if font is from an asset (with isFontAsset flag)

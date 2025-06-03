@@ -7,9 +7,8 @@ import 'package:dcflight/framework/renderer/interface/interface.dart' show Platf
 import 'package:dcflight/framework/renderer/vdom/component/component.dart';
 import 'package:dcflight/framework/renderer/vdom/component/error_boundary.dart';
 export 'package:dcflight/framework/renderer/vdom/component/store.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_element.dart';
-import 'package:dcflight/framework/renderer/vdom/vdom_node.dart';
-import 'package:dcflight/framework/renderer/vdom/component/fragment.dart';
+import 'package:dcflight/framework/renderer/vdom/component/dcf_element.dart';
+import 'package:dcflight/framework/renderer/vdom/component/component_node.dart';
 
 /// Virtual DOM implementation with efficient reconciliation and state handling
 class VDom {
@@ -23,7 +22,7 @@ class VDom {
   int _viewIdCounter = 1;
   
   /// Map of view IDs to their associated VDomNodes
-  final Map<String, VDomNode> _nodesByViewId = {};
+  final Map<String, DCFComponentNode> _nodesByViewId = {};
   
   /// Map to track component instances by their instance ID
   final Map<String, StatefulComponent> _statefulComponents = {};
@@ -32,7 +31,7 @@ class VDom {
   final Map<String, StatelessComponent> _statelessComponents = {};
   
   /// Map to track previous rendered nodes for components (for proper reconciliation)
-  final Map<String, VDomNode> _previousRenderedNodes = {};
+  final Map<String, DCFComponentNode> _previousRenderedNodes = {};
   
   /// Pending component updates for batching
   final Set<String> _pendingUpdates = {};
@@ -44,7 +43,7 @@ class VDom {
   bool _batchUpdateInProgress = false;
   
   /// Root component for the application
-  VDomNode? rootComponent;
+  DCFComponentNode? rootComponent;
   
   /// Error boundary registry
   final Map<String, ErrorBoundary> _errorBoundaries = {};
@@ -89,7 +88,7 @@ class VDom {
   }
   
   /// Register a component in the VDOM
-  void registerComponent(VDomNode component) {
+  void registerComponent(DCFComponentNode component) {
     if (component is StatefulComponent) {
       _statefulComponents[component.instanceId] = component;
       component.scheduleUpdate = () => _scheduleComponentUpdate(component);
@@ -114,7 +113,7 @@ class VDom {
       return;
     }
 
-    if (node is VDomElement) {
+    if (node is DCFElement) {
       // Try direct event handler match
       if (node.props.containsKey(eventType) && node.props[eventType] is Function) {
         _executeEventHandler(node.props[eventType], eventData);
@@ -135,6 +134,10 @@ class VDom {
     try {
       if (handler is Function(Map<String, dynamic>)) {
         handler(eventData);
+      } else if (handler is Function(String)) {
+        // Handle TextInput onChangeText events that expect a string parameter
+        final text = eventData['text'] as String? ?? '';
+        handler(text);
       } else if (handler is Function()) {
         handler();
       } else {
@@ -164,36 +167,10 @@ class VDom {
       registerComponent(component);
     }
     
-    // Add to the pending updates queue
+    // Only add this specific component to the update queue
+    // Don't cascade to parent components to prevent infinite loops
     _pendingUpdates.add(component.instanceId);
     
-    // Find the root component from this component
-    VDomNode? rootComponentCandidate = component;
-    while (rootComponentCandidate != null && rootComponentCandidate.parent != null) {
-      rootComponentCandidate = rootComponentCandidate.parent;
-    }
-    
-    // If this is a top-level fragment, make sure the entire app updates
-    if (rootComponent != null && rootComponentCandidate == rootComponent) {
-      if (kDebugMode) {
-        print('Adding global app update to ensure full reconciliation');
-      }
-    }
-    
-    // Add the direct container component to ensure proper reconciliation
-    VDomNode? parent = component.parent;
-    while (parent != null) {
-      // Update parent components to propagate the changes up the tree
-      if (parent is StatefulComponent) {
-        if (kDebugMode) {
-          print('  Adding parent component to update queue: ${parent.instanceId} (${parent.runtimeType})');
-        }
-        _pendingUpdates.add(parent.instanceId);
-      } 
-      // Continue walking up the tree to find all affected components
-      parent = parent.parent;
-    }
-
     // Only schedule a new update if one isn't already scheduled
     if (!_isUpdateScheduled) {
       _isUpdateScheduled = true;
@@ -241,8 +218,8 @@ class VDom {
         // Commit all batched updates at once
         await _nativeBridge.commitBatchUpdate();
         
-        // Calculate layout at the end for all updates at once
-        await calculateAndApplyLayout();
+        // Layout is now calculated automatically when layout props change
+        // No manual layout calculation needed
       } catch (e) {
         // Cancel batch if there's an error
         await _nativeBridge.cancelBatchUpdate();
@@ -369,41 +346,35 @@ class VDom {
     }
   }
 
-  /// Calculate and apply layout
-  Future<void> calculateAndApplyLayout({double? width, double? height}) async {
-    await isReady;
-    final success = await _nativeBridge.calculateLayout();
-    if (!success && kDebugMode) {
-      developer.log('⚠️ Layout calculation failed', name: 'VDom');
-    }
-  }
+  // REMOVED: calculateAndApplyLayout method
+  // Layout is now calculated automatically when layout props change
 
   /// Render a node to native UI
-  Future<String?> renderToNative(VDomNode node,
+  Future<String?> renderToNative(DCFComponentNode node,
       {String? parentViewId, int? index}) async {
     await isReady;
 
     try {
       // Handle Fragment nodes
-      if (node is Fragment) {
-        // Render children directly to parent
-        int childIndex = index ?? 0;
-        final childIds = <String>[];
+      // if (node is Fragment) {
+      //   // Render children directly to parent
+      //   int childIndex = index ?? 0;
+      //   final childIds = <String>[];
         
-        for (final child in node.children) {
-          final childId = await renderToNative(
-            child,
-            parentViewId: parentViewId,
-            index: childIndex++,
-          );
+      //   for (final child in node.children) {
+      //     final childId = await renderToNative(
+      //       child,
+      //       parentViewId: parentViewId,
+      //       index: childIndex++,
+      //     );
           
-          if (childId != null && childId.isNotEmpty) {
-            childIds.add(childId);
-          }
-        }
+      //     if (childId != null && childId.isNotEmpty) {
+      //       childIds.add(childId);
+      //     }
+      //   }
         
-        return null; // Fragments don't have their own ID
-      }
+      //   return null; // Fragments don't have their own ID
+      // }
 
       // Handle Component nodes
       if (node is StatefulComponent || node is StatelessComponent) {
@@ -452,7 +423,7 @@ class VDom {
         }
       } 
       // Handle Element nodes
-      else if (node is VDomElement) {
+      else if (node is DCFElement) {
         return await _renderElementToNative(node, parentViewId: parentViewId, index: index);
       } 
       // Handle EmptyVDomNode
@@ -471,7 +442,7 @@ class VDom {
   }
 
   /// Render an element to native UI
-  Future<String?> _renderElementToNative(VDomElement element,
+  Future<String?> _renderElementToNative(DCFElement element,
       {String? parentViewId, int? index}) async {
     // Use existing view ID or generate a new one
     final viewId = element.nativeViewId ?? _generateViewId();
@@ -520,7 +491,7 @@ class VDom {
   }
 
   /// Reconcile two nodes by efficiently updating only what changed
-  Future<void> _reconcile(VDomNode oldNode, VDomNode newNode) async {
+  Future<void> _reconcile(DCFComponentNode oldNode, DCFComponentNode newNode) async {
     // Transfer important parent reference first
     newNode.parent = oldNode.parent;
     
@@ -538,7 +509,7 @@ class VDom {
     }
 
     // Handle different node types
-    if (oldNode is VDomElement && newNode is VDomElement) {
+    if (oldNode is DCFElement && newNode is DCFElement) {
       // If different element types, we need to replace it
       if (oldNode.type != newNode.type) {
         await _replaceNode(oldNode, newNode);
@@ -580,19 +551,19 @@ class VDom {
       await _reconcile(oldRenderedNode, newRenderedNode);
         }
     // Handle Fragment nodes
-    else if (oldNode is Fragment && newNode is Fragment) {
-      // Transfer children relationships
-      newNode.parent = oldNode.parent;
+    // else if (oldNode is Fragment && newNode is Fragment) {
+    //   // Transfer children relationships
+    //   newNode.parent = oldNode.parent;
       
-      // Reconcile fragment children directly since fragments don't have native view IDs
-      if (oldNode.children.isNotEmpty || newNode.children.isNotEmpty) {
-        // Find the parent view ID to reconcile children against
-        final parentViewId = _findParentViewId(oldNode);
-        if (parentViewId != null) {
-          await _reconcileFragmentChildren(parentViewId, oldNode.children, newNode.children);
-        }
-      }
-    }
+    //   // Reconcile fragment children directly since fragments don't have native view IDs
+    //   if (oldNode.children.isNotEmpty || newNode.children.isNotEmpty) {
+    //     // Find the parent view ID to reconcile children against
+    //     final parentViewId = _findParentViewId(oldNode);
+    //     if (parentViewId != null) {
+    //       await _reconcileFragmentChildren(parentViewId, oldNode.children, newNode.children);
+    //     }
+    //   }
+    // }
     // Handle empty nodes
     else if (oldNode is EmptyVDomNode && newNode is EmptyVDomNode) {
       // Nothing to do for empty nodes
@@ -603,7 +574,7 @@ class VDom {
   // No special handling for specific component types - all components are treated equally
   
   /// Replace a node entirely
-  Future<void> _replaceNode(VDomNode oldNode, VDomNode newNode) async {
+  Future<void> _replaceNode(DCFComponentNode oldNode, DCFComponentNode newNode) async {
     // Can't replace if the old node has no view ID
     if (oldNode.effectiveNativeViewId == null) {
       return;
@@ -621,23 +592,40 @@ class VDom {
     // Find index of node in parent
     final index = _findNodeIndexInParent(oldNode);
 
-    // Delete the old view
-    await _nativeBridge.deleteView(oldNode.effectiveNativeViewId!);
-    _nodesByViewId.remove(oldNode.effectiveNativeViewId);
-    
-    // Create the new view
-    final newViewId = await renderToNative(newNode, parentViewId: parentViewId, index: index);
-    
-    // Update references
-    if (newViewId != null && newViewId.isNotEmpty) {
-      newNode.nativeViewId = newViewId;
-      _nodesByViewId[newViewId] = newNode;
+    // CRITICAL FIX: Temporarily exit batch mode to ensure atomic delete+create
+    // This prevents createView from being queued while deleteView executes immediately
+    final wasBatchMode = _batchUpdateInProgress;
+    if (wasBatchMode) {
+      // Temporarily commit current batch to ensure proper ordering
+      await _nativeBridge.commitBatchUpdate();
+      _batchUpdateInProgress = false;
+    }
+
+    try {
+      // Delete the old view
+      await _nativeBridge.deleteView(oldNode.effectiveNativeViewId!);
+      _nodesByViewId.remove(oldNode.effectiveNativeViewId);
+      
+      // Create the new view (now outside batch mode, so it executes immediately)
+      final newViewId = await renderToNative(newNode, parentViewId: parentViewId, index: index);
+      
+      // Update references
+      if (newViewId != null && newViewId.isNotEmpty) {
+        newNode.nativeViewId = newViewId;
+        _nodesByViewId[newViewId] = newNode;
+      }
+    } finally {
+      // Resume batch mode if we were previously in batch mode
+      if (wasBatchMode) {
+        await _nativeBridge.startBatchUpdate();
+        _batchUpdateInProgress = true;
+      }
     }
   }
 
   /// Find a node's parent view ID
-  String? _findParentViewId(VDomNode node) {
-    VDomNode? current = node.parent;
+  String? _findParentViewId(DCFComponentNode node) {
+    DCFComponentNode? current = node.parent;
     
     // Find the first parent with a native view ID
     while (current != null) {
@@ -653,19 +641,19 @@ class VDom {
   }
 
   /// Find a node's index in its parent's children
-  int _findNodeIndexInParent(VDomNode node) {
+  int _findNodeIndexInParent(DCFComponentNode node) {
     // Can't determine index without parent
     if (node.parent == null) return 0;
     
     // Only element parents can have indexed children
-    if (node.parent is! VDomElement) return 0;
+    if (node.parent is! DCFElement) return 0;
     
-    final parent = node.parent as VDomElement;
+    final parent = node.parent as DCFElement;
     return parent.children.indexOf(node);
   }
 
   /// Reconcile an element - update props and children
-  Future<void> _reconcileElement(VDomElement oldElement, VDomElement newElement) async {
+  Future<void> _reconcileElement(DCFElement oldElement, DCFElement newElement) async {
     // Update properties if the element has a native view
     if (oldElement.nativeViewId != null) {
       // Copy native view ID to new element for tracking
@@ -738,7 +726,7 @@ class VDom {
   }
 
   /// Reconcile children with keyed optimization
-  Future<void> _reconcileChildren(VDomElement oldElement, VDomElement newElement) async {
+  Future<void> _reconcileChildren(DCFElement oldElement, DCFElement newElement) async {
     final oldChildren = oldElement.children;
     final newChildren = newElement.children;
     
@@ -764,7 +752,7 @@ class VDom {
   }
 
   /// Check if any children have explicit keys
-  bool _childrenHaveKeys(List<VDomNode> children) {
+  bool _childrenHaveKeys(List<DCFComponentNode> children) {
     if (children.isEmpty) return false;
     
     for (var child in children) {
@@ -775,32 +763,35 @@ class VDom {
   }
 
   /// Reconcile fragment children directly without a container element
-  Future<void> _reconcileFragmentChildren(String parentViewId, 
-      List<VDomNode> oldChildren, List<VDomNode> newChildren) async {
-    // Use the same reconciliation logic as elements but for fragment children
-    final hasKeys = _childrenHaveKeys(newChildren);
+  // Future<void> _reconcileFragmentChildren(String parentViewId, 
+  //     List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
+  //   // Use the same reconciliation logic as elements but for fragment children
+  //   final hasKeys = _childrenHaveKeys(newChildren);
     
-    if (hasKeys) {
-      await _reconcileKeyedChildren(parentViewId, oldChildren, newChildren);
-    } else {
-      await _reconcileSimpleChildren(parentViewId, oldChildren, newChildren);
-    }
-  }
+  //   if (hasKeys) {
+  //     await _reconcileKeyedChildren(parentViewId, oldChildren, newChildren);
+  //   } else {
+  //     await _reconcileSimpleChildren(parentViewId, oldChildren, newChildren);
+  //   }
+  // }
 
   /// Reconcile children with keys for optimal reordering
   Future<void> _reconcileKeyedChildren(String parentViewId, 
-      List<VDomNode> oldChildren, List<VDomNode> newChildren) async {
+      List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
     // Create map of old children by key for O(1) lookup
-    final oldChildrenMap = <String?, VDomNode>{};
+    final oldChildrenMap = <String?, DCFComponentNode>{};
+    final oldChildOrderByKey = <String?, int>{};
     for (int i = 0; i < oldChildren.length; i++) {
       final oldChild = oldChildren[i];
       final key = oldChild.key ?? i.toString(); // Use index for null keys
       oldChildrenMap[key] = oldChild;
+      oldChildOrderByKey[key] = i;
     }
     
     // Track children that need to be in final list
     final updatedChildIds = <String>[];
-    final processedOldChildren = <VDomNode>{};
+    final processedOldChildren = <DCFComponentNode>{};
+    bool hasStructuralChanges = false;
     
     // Process each new child
     for (int i = 0; i < newChildren.length; i++) {
@@ -820,12 +811,18 @@ class VDom {
         // Get the view ID (which might come from different sources)
         childViewId = oldChild.effectiveNativeViewId;
         
-        // Update position if needed
-        if (childViewId != null) {
-          await _moveChild(childViewId, parentViewId, i);
+        // Check if the position changed (reordering)
+        final oldIndex = oldChildOrderByKey[key];
+        if (oldIndex != null && oldIndex != i) {
+          hasStructuralChanges = true;
+          // Update position if needed
+          if (childViewId != null) {
+            await _moveChild(childViewId, parentViewId, i);
+          }
         }
       } else {
-        // Create new child
+        // Create new child - this is a structural change
+        hasStructuralChanges = true;
         childViewId = await renderToNative(newChild, parentViewId: parentViewId, index: i);
       }
       
@@ -838,6 +835,7 @@ class VDom {
     // Remove old children that aren't in the new list
     for (var oldChild in oldChildren) {
       if (!processedOldChildren.contains(oldChild)) {
+        hasStructuralChanges = true; // Removal is a structural change
         final viewId = oldChild.effectiveNativeViewId;
         if (viewId != null) {
           await _nativeBridge.deleteView(viewId);
@@ -846,17 +844,21 @@ class VDom {
       }
     }
     
-    // Ensure children are in correct order
-    if (updatedChildIds.isNotEmpty) {
+    // Only call setChildren if there were structural changes (additions, removals, or reorders)
+    if (hasStructuralChanges && updatedChildIds.isNotEmpty) {
+      if (kDebugMode) {
+        print('🔄 Calling setChildren due to structural changes in keyed reconciliation');
+      }
       await _nativeBridge.setChildren(parentViewId, updatedChildIds);
     }
   }
 
   /// Reconcile children without keys (simpler algorithm)
   Future<void> _reconcileSimpleChildren(String parentViewId, 
-      List<VDomNode> oldChildren, List<VDomNode> newChildren) async {
+      List<DCFComponentNode> oldChildren, List<DCFComponentNode> newChildren) async {
     final updatedChildIds = <String>[];
     final commonLength = math.min(oldChildren.length, newChildren.length);
+    bool hasStructuralChanges = false;
     
     // Update common children
     for (int i = 0; i < commonLength; i++) {
@@ -875,7 +877,8 @@ class VDom {
     
     // Handle length differences
     if (newChildren.length > oldChildren.length) {
-      // Add any extra new children
+      // Add any extra new children - this is a structural change
+      hasStructuralChanges = true;
       for (int i = commonLength; i < newChildren.length; i++) {
         final childViewId = await renderToNative(
           newChildren[i], 
@@ -888,7 +891,8 @@ class VDom {
         }
       }
     } else if (oldChildren.length > newChildren.length) {
-      // Remove any extra old children
+      // Remove any extra old children - this is a structural change
+      hasStructuralChanges = true;
       for (int i = commonLength; i < oldChildren.length; i++) {
         final viewId = oldChildren[i].effectiveNativeViewId;
         if (viewId != null) {
@@ -898,8 +902,11 @@ class VDom {
       }
     }
     
-    // Ensure children are in correct order
-    if (updatedChildIds.isNotEmpty) {
+    // Only call setChildren if there were structural changes (additions or removals)
+    if (hasStructuralChanges && updatedChildIds.isNotEmpty) {
+      if (kDebugMode) {
+        print('🔄 Calling setChildren due to structural changes in simple reconciliation');
+      }
       await _nativeBridge.setChildren(parentViewId, updatedChildIds);
     }
   }
@@ -912,8 +919,8 @@ class VDom {
   }
 
   /// Find the nearest error boundary
-  ErrorBoundary? _findNearestErrorBoundary(VDomNode node) {
-    VDomNode? current = node;
+  ErrorBoundary? _findNearestErrorBoundary(DCFComponentNode node) {
+    DCFComponentNode? current = node;
     
     while (current != null) {
       if (current is ErrorBoundary) {
@@ -926,7 +933,7 @@ class VDom {
   }
 
   /// Create the root component for the application
-  Future<void> createRoot(VDomNode component) async {
+  Future<void> createRoot(DCFComponentNode component) async {
     rootComponent = component;
     
     // Register the component with this VDOM
@@ -935,8 +942,8 @@ class VDom {
     // Render to native
     await renderToNative(component, parentViewId: "root");
     
-    // Calculate layout
-    await calculateAndApplyLayout();
+    // Layout is now calculated automatically when layout props change
+    // No manual layout calculation needed
     
     if (kDebugMode) {
       print('VDOM is ready to calculate');

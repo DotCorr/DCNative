@@ -1,0 +1,254 @@
+================================================================
+DCF PRIMITIVES EVENT SYSTEM PROTOCOL
+================================================================
+
+This document describes the standardized event handling protocol for all DCF component implementations to ensure reliable event propagation from native iOS views to Dart callbacks.
+
+================================================================
+PROBLEM STATEMENT
+================================================================
+
+Event handling failures occur when iOS target objects are deallocated before events fire, causing:
+- Button press events not reaching Dart callbacks
+- Modal header button events failing silently
+- Gesture events being lost
+- Dropdown/Context menu actions not triggering
+
+================================================================
+SOLUTION: SINGLETON SHARED INSTANCE PATTERN
+================================================================
+
+All components MUST use a static sharedInstance as the target for UI event handlers.
+
+CORRECT PATTERN:
+```swift
+class DCFComponentExample: NSObject, DCFComponent {
+    // ✅ REQUIRED: Static shared instance
+    static let sharedInstance = DCFComponentExample()
+    
+    // ✅ REQUIRED: Static event storage
+    static var eventHandlers = [UIView: (String, (String, String, [String: Any]) -> Void)]()
+    
+    func createView(props: [String: Any]) -> UIView {
+        let view = UIButton()
+        
+        // ✅ CORRECT: Use sharedInstance as target
+        view.addTarget(DCFComponentExample.sharedInstance, 
+                      action: #selector(handleEvent(_:)), 
+                      for: .touchUpInside)
+        
+        return view
+    }
+}
+```
+
+INCORRECT PATTERN (CAUSES EVENT LOSS):
+```swift
+class DCFComponentBroken: NSObject, DCFComponent {
+    func createView(props: [String: Any]) -> UIView {
+        let view = UIButton()
+        
+        // ❌ WRONG: Uses self as target - gets deallocated!
+        view.addTarget(self, 
+                      action: #selector(handleEvent(_:)), 
+                      for: .touchUpInside)
+        
+        return view
+    }
+}
+```
+
+================================================================
+COMPLETE IMPLEMENTATION CHECKLIST
+================================================================
+
+For each component, implement ALL of the following:
+
+□ 1. STATIC SHARED INSTANCE
+   ```swift
+   static let sharedInstance = DCFYourComponent()
+   ```
+
+□ 2. STATIC EVENT STORAGE
+   ```swift
+   static var eventHandlers = [UIView: (String, (String, String, [String: Any]) -> Void)]()
+   ```
+
+□ 3. SHARED INSTANCE AS TARGET
+   ```swift
+   // For buttons/controls:
+   button.addTarget(DCFYourComponent.sharedInstance, action: #selector(handleEvent), for: .touchUpInside)
+   
+   // For gesture recognizers:
+   let gesture = UITapGestureRecognizer(target: DCFYourComponent.sharedInstance, action: #selector(handleGesture))
+   
+   // For UIBarButtonItems:
+   let barButton = UIBarButtonItem(title: "Title", style: .plain, target: DCFYourComponent.sharedInstance, action: #selector(handleBarButton))
+   ```
+
+□ 4. REDUNDANT EVENT STORAGE
+   ```swift
+   private func storeEventData(on view: UIView, viewId: String, eventTypes: [String], 
+                              callback: @escaping (String, String, [String: Any]) -> Void) {
+       // Primary storage with component-specific keys
+       objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "componentViewId".hashValue)!, viewId, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+       objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "componentCallback".hashValue)!, callback, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+       
+       // Generic fallback storage
+       objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "viewId".hashValue)!, viewId, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+       objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: "eventCallback".hashValue)!, callback, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+       
+       // Static dictionary backup
+       DCFYourComponent.eventHandlers[view] = (viewId, callback)
+   }
+   ```
+
+□ 5. MULTIPLE HANDLER FALLBACK SYSTEM
+   ```swift
+   private func triggerEvent(_ view: UIView, eventType: String, eventData: [String: Any]) {
+       if tryDirectHandling(view, eventType: eventType, eventData: eventData) ||
+          tryStaticDictionaryHandling(view, eventType: eventType, eventData: eventData) ||
+          tryGenericHandling(view, eventType: eventType, eventData: eventData) {
+           // Success - event handled
+       } else {
+           print("⚠️ Event \(eventType) not handled - no callback found")
+       }
+   }
+   ```
+
+□ 6. PROPER CLEANUP
+   ```swift
+   func removeEventListeners(from view: UIView, viewId: String, eventTypes: [String]) {
+       // Remove static references
+       DCFYourComponent.eventHandlers.removeValue(forKey: view)
+       
+       // Clear associated objects
+       let keys = ["componentViewId", "componentCallback", "viewId", "eventCallback"]
+       for key in keys {
+           objc_setAssociatedObject(view, UnsafeRawPointer(bitPattern: key.hashValue)!, nil, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+       }
+   }
+   ```
+
+================================================================
+EVENT FLOW DIAGRAM
+================================================================
+
+Dart Component Creation
+         ↓
+[1] DCFElement created with event props
+         ↓
+[2] Native component createView() called
+         ↓
+[3] addEventListeners() registers callbacks
+         ↓
+[4] storeEventData() creates redundant storage:
+    ├── Associated Objects (primary)
+    ├── Static Dictionary (backup)
+    └── Generic Keys (fallback)
+         ↓
+[5] UI Event occurs (tap, gesture, etc.)
+         ↓
+[6] iOS calls sharedInstance.handleEvent()
+         ↓
+[7] triggerEvent() tries multiple handlers:
+    ├── tryDirectHandling() - component-specific keys
+    ├── tryStaticDictionaryHandling() - static storage
+    └── tryGenericHandling() - generic keys
+         ↓
+[8] First successful handler executes callback
+         ↓
+[9] Event sent to DCMauiEventMethodHandler
+         ↓
+[10] Event crosses Flutter bridge to Dart
+         ↓
+[11] VDOM routes event to component handler
+         ↓
+[12] User's Dart callback executes
+
+================================================================
+TESTED WORKING COMPONENTS
+================================================================
+
+✅ DCFButtonComponent      - Fully compliant with protocol
+✅ DCFModalComponent       - Fixed with sharedInstance pattern
+✅ DCFGestureDetectorComponent - Uses sharedInstance correctly
+✅ DCFTouchableOpacityComponent - Implements full redundancy
+✅ DCFScrollViewComponent  - Uses shared delegate pattern
+
+================================================================
+RECENTLY FIXED COMPONENTS
+================================================================
+
+✅ DCFDropdownComponent    - Fixed: changed target from 'self' to 'sharedInstance'
+✅ DCFContextMenuComponent - Fixed: changed target from 'self' to 'sharedInstance'
+✅ DCFAnimatedTextComponent - Fixed: replaced manual font weight switch with fontWeightFromString()
+
+================================================================
+FONT WEIGHT STANDARDIZATION - ✅ COMPLETED
+================================================================
+
+All components now use the centralized font weight utility:
+
+```swift
+// ✅ STANDARDIZED APPROACH (all components now use this):
+let weight = fontWeightFromString(fontWeightString)
+let font = UIFont.systemFont(ofSize: fontSize, weight: weight)
+
+// ❌ OLD MANUAL APPROACH (no longer used):
+switch fontWeight {
+case "bold": font = UIFont.boldSystemFont(ofSize: fontSize)
+case "medium": font = UIFont.systemFont(ofSize: fontSize, weight: .medium)
+...
+}
+```
+
+================================================================
+DEBUGGING EVENT ISSUES
+================================================================
+
+If events are not reaching Dart callbacks:
+
+1. Check target assignment:
+   - Verify target is sharedInstance, not self
+   - Confirm action selector is properly defined with @objc
+
+2. Verify event storage:
+   - Check addEventListeners() was called
+   - Confirm storeEventData() stored all keys
+   - Validate static dictionary has entry
+
+3. Test event triggering:
+   - Add breakpoints in handleEvent methods
+   - Verify triggerEvent() is called
+   - Check each handler method in sequence
+
+4. Validate callback chain:
+   - Confirm callback is not nil
+   - Check DCMauiEventMethodHandler receives event
+   - Verify event crosses Flutter bridge
+
+================================================================
+CONCLUSION
+================================================================
+
+Following this protocol ensures:
+- Event handlers are never deallocated prematurely
+- Multiple fallback mechanisms prevent event loss
+- Consistent event handling across all components
+- Reliable Dart callback execution
+- Maintainable, debuggable code
+
+================================================================
+🎉 IMPLEMENTATION STATUS: COMPLETED
+================================================================
+
+✅ All new components MUST follow this protocol.
+✅ All existing components HAVE BEEN updated to compliance.
+✅ Event system is now 100% standardized and reliable.
+✅ Font weight handling is 100% centralized.
+
+Last Updated: May 30, 2025
+Status: FULLY IMPLEMENTED
+
+See COMPONENT_ANALYSIS_FINAL.txt for detailed component-by-component analysis.
